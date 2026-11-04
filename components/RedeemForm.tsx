@@ -17,7 +17,7 @@ export default function RedeemForm({ token, loggedInEmail }: { token: string; lo
         <>
           <div className="flex border border-[var(--line)] text-sm">
             {(['signup', 'login'] as const).map((m) => (
-              <button key={m} type="button" onClick={() => setMode(m)} className={`flex-1 py-2 transition-colors ${mode === m ? 'bg-white text-black' : 'text-[#a1a1a1] hover:text-white'}`}>
+              <button key={m} type="button" onClick={() => setMode(m)} className={`flex-1 py-2 transition-colors ${mode === m ? 'bg-[var(--g)] text-black' : 'text-[#a1a1a1] hover:text-[var(--g)]'}`}>
                 {m === 'signup' ? 'Create account' : 'I have an account'}
               </button>
             ))}

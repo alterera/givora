@@ -7,6 +7,31 @@ import { viewerProps, type Product } from '@/lib/products'
 import { getOpenListing, getPieceState, getProvenance } from '@/lib/pieces'
 import { fmtDate, inr } from '@/lib/format'
 import ProductViewer from '@/components/particle/ProductViewer'
+import ProductCard from '@/components/ProductCard'
+import Reveal from '@/components/Reveal'
+import LiveViewers from '@/components/LiveViewers'
+import { getPublished, lastSales } from '@/lib/catalog'
+
+async function Similar({ product }: { product: Product }) {
+  const { products } = await getPublished({ excludeId: product.id, limit: 24 })
+  // Same artist first, then the newest of the rest.
+  const picks = [...products.filter((p) => p.artist_name && p.artist_name === product.artist_name), ...products.filter((p) => !p.artist_name || p.artist_name !== product.artist_name)].slice(0, 4)
+  if (!picks.length) return null
+  const sales = await lastSales(picks.map((p) => p.id))
+  return (
+    <section className="container-x pb-20 pt-4">
+      <Reveal>
+        <div className="mb-6 flex items-end justify-between gap-4 border-t border-[var(--line)] pt-10">
+          <div><p className="eyebrow mb-2">Keep exploring</p><h2 className="text-2xl font-semibold tracking-tight">Similar pieces</h2></div>
+          <Link href="/collection" className="btn btn-sm">View all →</Link>
+        </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {picks.map((p, i) => <ProductCard key={p.id} product={p} index={i} lastSale={sales.get(p.id) ?? null} />)}
+        </div>
+      </Reveal>
+    </section>
+  )
+}
 
 async function Detail({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -19,18 +44,19 @@ async function Detail({ params }: { params: Promise<{ slug: string }> }) {
   const available = p.stock > 0 && !state.editionId
 
   return (
-    <main className="container-x grid gap-8 py-8 lg:grid-cols-[1.25fr_1fr] lg:gap-14 lg:py-12">
-      <div className="reveal lg:sticky lg:top-20 lg:self-start">
-        <div className="relative aspect-square w-full border border-[var(--line)] lg:aspect-[5/6]">
+    <main>
+    <div className="container-x grid gap-8 py-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] lg:gap-14 lg:py-10">
+      <div className="reveal mx-auto flex w-full max-w-sm flex-col gap-3 lg:sticky lg:top-24 lg:mx-0 lg:self-start">
+        <LiveViewers seed={p.slug} />
+        <div className="relative aspect-square w-full border border-[var(--line)]">
           <ProductViewer {...viewerProps(p, undefined, { interactive: true, owner: isOwner })} className="absolute inset-0" />
-          <span className="eyebrow pointer-events-none absolute bottom-3 left-3">Drag to rotate · Scroll to zoom</span>
+          <span className="eyebrow pointer-events-none absolute bottom-3 left-3">Drag to rotate · Pinch or Ctrl+scroll to zoom · Double-tap to reset</span>
         </div>
       </div>
 
       <div className="flex flex-col gap-8 lg:py-4">
         <div className="reveal d1">
-          <Link href="/#collection" className="eyebrow link-underline">← Collection</Link>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="badge badge-live">1 OF 1</span>
             {p.serial && <Link href={`/certificate/${p.serial}`} className="badge link-underline">{p.serial} · CERTIFICATE →</Link>}
           </div>
@@ -89,13 +115,41 @@ async function Detail({ params }: { params: Promise<{ slug: string }> }) {
           ))}
         </dl>
       </div>
+    </div>
+    <Suspense fallback={null}><Similar product={p} /></Suspense>
+    </main>
+  )
+}
+
+function ProductSkeleton() {
+  return (
+    <main aria-busy="true" aria-label="Loading piece">
+      <div className="container-x grid gap-8 py-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] lg:gap-14 lg:py-10">
+        <div className="mx-auto flex w-full max-w-sm flex-col gap-3 lg:mx-0">
+          <div className="skel h-12" />
+          <div className="relative aspect-square w-full overflow-hidden border border-[#0f2a1e]">
+            <div className="particle-skeleton" />
+            <span className="mono absolute bottom-3 left-3 text-[10px] uppercase tracking-[.2em] text-[#4f8f72]">Decrypting piece…</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-7 lg:py-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2"><div className="skel h-6 w-16" /><div className="skel h-6 w-36" /></div>
+            <div className="skel h-12 w-4/5" />
+            <div className="skel h-4 w-2/5" />
+          </div>
+          <div className="flex flex-col gap-2"><div className="skel h-3 w-full" /><div className="skel h-3 w-[92%]" /><div className="skel h-3 w-[70%]" /></div>
+          <div className="skel h-44 w-full" />
+          <div className="grid grid-cols-2 gap-px">{[0, 1, 2, 3].map((i) => <div key={i} className="skel h-16" />)}</div>
+        </div>
+      </div>
     </main>
   )
 }
 
 export default function ProductPage({ params }: PageProps<'/products/[slug]'>) {
   return (
-    <Suspense fallback={<main className="container-x py-12"><div className="panel particle-skeleton relative aspect-square max-w-2xl" /></main>}>
+    <Suspense fallback={<ProductSkeleton />}>
       <Detail params={params} />
     </Suspense>
   )

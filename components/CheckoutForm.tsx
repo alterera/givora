@@ -40,7 +40,7 @@ export default function CheckoutForm({ slug, mode, giftDefault = false }: { slug
           <button
             key={String(v)} type="button" role="tab" aria-selected={gift === v}
             onClick={() => setGift(v as boolean)}
-            className={`py-2.5 transition-colors ${gift === v ? 'bg-white text-black' : 'text-[#a1a1a1] hover:text-white'}`}
+            className={`py-2.5 transition-colors ${gift === v ? 'bg-[var(--g)] text-black' : 'text-[#a1a1a1] hover:text-[var(--g)]'}`}
           >{label as string}</button>
         ))}
       </div>
@@ -60,7 +60,7 @@ export default function CheckoutForm({ slug, mode, giftDefault = false }: { slug
                 {OCCASIONS.map(([id, label]) => (
                   <button
                     key={id} type="button" onClick={() => setOccasion(occasion === id ? '' : id)}
-                    className={`border px-3 py-1.5 text-sm transition-colors ${occasion === id ? 'border-white bg-white text-black' : 'border-[var(--line-strong)] text-[#a1a1a1] hover:text-white'}`}
+                    className={`border px-3 py-1.5 text-sm transition-colors ${occasion === id ? 'border-[var(--g)] bg-[var(--g)] text-black' : 'border-[var(--line-strong)] text-[#a1a1a1] hover:text-[var(--g)]'}`}
                   >{label}</button>
                 ))}
               </div>

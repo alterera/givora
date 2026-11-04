@@ -16,7 +16,7 @@ export default function ListForSale({ productId, royaltyBps, lastSale }: { produ
       <input type="hidden" name="product_id" value={productId} />
       <div className="grid grid-cols-2 border border-[var(--line)] text-sm">
         {([['public', 'Public listing'], ['private', 'Private link']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setKind(k)} className={`py-2 transition-colors ${kind === k ? 'bg-white text-black' : 'text-[#a1a1a1] hover:text-white'}`}>{label}</button>
+          <button key={k} type="button" onClick={() => setKind(k)} className={`py-2 transition-colors ${kind === k ? 'bg-[var(--g)] text-black' : 'text-[#a1a1a1] hover:text-[var(--g)]'}`}>{label}</button>
         ))}
       </div>
       <input type="hidden" name="kind" value={kind} />

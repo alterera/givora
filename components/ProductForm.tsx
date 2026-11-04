@@ -60,7 +60,7 @@ export default function ProductForm({ initial = {} }: { initial?: Initial }) {
           <label className="label">
             Upload .glb (colours kept), .bin from Particleify, or png/jpg/webp{initial.asset_path && <> · current: <span className="mono">{initial.asset_path}</span></>}
           </label>
-          <input name="asset" type="file" disabled={!!initial.minted_at} accept=".glb,.bin,.png,.jpg,.jpeg,.webp" className="input h-auto py-2 file:mr-3 file:border-0 file:bg-white file:px-3 file:py-1 file:text-black" />
+          <input name="asset" type="file" disabled={!!initial.minted_at} accept=".glb,.bin,.png,.jpg,.jpeg,.webp" className="input h-auto py-2 file:mr-3 file:border-0 file:bg-[var(--g)] file:px-3 file:py-1 file:text-black" />
         </div>
         <div>
           <label className="label">Palette (used for .bin clouds only)</label>

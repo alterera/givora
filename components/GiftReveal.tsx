@@ -31,9 +31,9 @@ export default function GiftReveal({ viewer, title, artist, serial, sender, mess
     return (
       <div className="reveal mx-auto flex max-w-md flex-col items-center gap-6 py-12 text-center">
         <div className="relative grid size-40 place-items-center border border-[var(--line-strong)] bg-[#050505]">
-          <div className="absolute inset-x-0 top-1/2 h-px bg-white/30" />
-          <div className="absolute inset-y-0 left-1/2 w-px bg-white/30" />
-          <div className="relative size-6 rotate-45 border border-white bg-black" />
+          <div className="absolute inset-x-0 top-1/2 h-px bg-[var(--g)]/30" />
+          <div className="absolute inset-y-0 left-1/2 w-px bg-[var(--g)]/30" />
+          <div className="relative size-6 rotate-45 border border-[var(--g)] bg-black" />
         </div>
         <div>
           <p className="eyebrow mb-3">{occasion ? OCCASION_LABEL[occasion] : 'A gift for you'}</p>

@@ -25,7 +25,7 @@ export default function Provenance({ steps, valid }: { steps: ProvenanceStep[]; 
           const last = i === steps.length - 1
           return (
             <li key={i} className="relative pb-6 pl-6 last:pb-0">
-              <span className={`absolute -left-[5px] top-1.5 size-2.5 ${last ? 'bg-white' : 'bg-[#3d3d3d]'}`} />
+              <span className={`absolute -left-[5px] top-1.5 size-2.5 ${last ? 'bg-[var(--g)]' : 'bg-[#3d3d3d]'}`} />
               <p className="text-sm font-medium">{d.title}</p>
               <p className="mono text-xs text-[#8f8f8f]">{fmtDate(s.at)}{d.detail ? ` · ${d.detail}` : ''}</p>
             </li>

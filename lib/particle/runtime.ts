@@ -400,7 +400,12 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
   let zoom = 1
   let baseDistance = 45
   let autoBlend = 1
-  const drag = { active: false, x: 0, y: 0, lastInput: 0 }
+  const drag = { active: false, x: 0, y: 0, lastInput: 0, t: 0 }
+  // Orbit state: yaw (spin around the vertical axis) and pitch (tilt) are kept apart, with inertia.
+  const spinVel = { yaw: 0, pitch: 0 }
+  const touches = new Map<number, { x: number; y: number }>()
+  let pinchDist = 0
+  const MAX_PITCH = 1.15
 
   function resize() {
     const rect = canvas.getBoundingClientRect()
@@ -437,10 +442,30 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
     const userHolding = interactive && (drag.active || performance.now() - drag.lastInput < 1000)
     autoBlend += ((userHolding ? 0 : 1) - autoBlend) * Math.min(1, dt * 5)
     if (points) {
-      if (cfg.motion === 'spin' || (interactive && cfg.motion === 'sway')) {
-        points.rotation.y += dt * (effectName === 'vortex' ? 0.48 * (0.5 + effectIntensity) : 0.15) * autoBlend
-        points.rotation.z += dt * 0.06 * autoBlend
-        points.rotation.x += (Math.sin(time * 0.15) * 0.12 - points.rotation.x) * Math.min(1, dt * 4.8) * autoBlend
+      if (interactive) {
+        // Yaw/pitch only (no roll), so the object never ends up on its side.
+        points.rotation.order = 'YXZ'
+        points.rotation.z = 0
+        const auto = cfg.motion === 'spin' || cfg.motion === 'sway'
+        if (!drag.active) {
+          points.rotation.y += spinVel.yaw * dt
+          points.rotation.x += spinVel.pitch * dt
+          const decay = Math.exp(-dt * 3.2)
+          spinVel.yaw *= decay; spinVel.pitch *= decay
+          if (Math.abs(spinVel.yaw) < 0.001) spinVel.yaw = 0
+          if (Math.abs(spinVel.pitch) < 0.001) spinVel.pitch = 0
+        }
+        if (auto) {
+          points.rotation.y += dt * (effectName === 'vortex' ? 0.48 * (0.5 + effectIntensity) : 0.15) * autoBlend
+        }
+        // Ease the tilt back toward a gentle level once the user lets go.
+        const level = auto ? Math.sin(time * 0.15) * 0.1 : 0
+        points.rotation.x += (level - points.rotation.x) * Math.min(1, dt * 1.6) * autoBlend
+        points.rotation.x = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, points.rotation.x))
+      } else if (cfg.motion === 'spin') {
+        points.rotation.y += dt * (effectName === 'vortex' ? 0.48 * (0.5 + effectIntensity) : 0.15)
+        points.rotation.z += dt * 0.06
+        points.rotation.x += (Math.sin(time * 0.15) * 0.12 - points.rotation.x) * Math.min(1, dt * 4.8)
       } else if (cfg.motion === 'sway') {
         points.rotation.set(Math.sin(time * 0.3) * 0.08, Math.sin(time * 0.7) * 0.32, 0)
       } else {
@@ -475,38 +500,80 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
     if (r.width <= 0 || r.height <= 0) return
     hoverTarget.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
   }
+  const setZoom = (z: number) => {
+    zoom = Math.min(1.5, Math.max(0.55, z))
+    camera.position.z = baseDistance * zoom
+  }
+  const pinchSpan = () => {
+    const [a, b] = [...touches.values()]
+    return Math.hypot(a.x - b.x, a.y - b.y)
+  }
   const onMove = (e: PointerEvent) => {
-    pointerInside = !drag.active
-    updatePointer(e)
-    if (interactive && drag.active && points) {
-      points.rotation.y += (e.clientX - drag.x) * 0.005
-      points.rotation.x += (e.clientY - drag.y) * 0.005
-      drag.x = e.clientX; drag.y = e.clientY; drag.lastInput = performance.now()
+    const isTouch = e.pointerType === 'touch'
+    if (!isTouch) { pointerInside = !drag.active; updatePointer(e) }
+    if (!interactive) return
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (touches.size === 2) { // two fingers: pinch to zoom
+      const d = pinchSpan()
+      if (pinchDist > 0 && d > 0) setZoom(zoom * (pinchDist / d))
+      pinchDist = d
+      return
+    }
+    if (drag.active && points) {
+      const dx = e.clientX - drag.x
+      const dy = isTouch ? 0 : e.clientY - drag.y // on touch, vertical swipes belong to page scrolling
+      const dtm = Math.max(1, e.timeStamp - drag.t) / 1000
+      const k = 0.0085 * Math.min(1.4, zoom + 0.4) // finer control when zoomed in
+      points.rotation.y += dx * k
+      points.rotation.x = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, points.rotation.x + dy * k))
+      spinVel.yaw = Math.max(-9, Math.min(9, (dx * k) / dtm))
+      spinVel.pitch = Math.max(-6, Math.min(6, (dy * k) / dtm))
+      drag.x = e.clientX; drag.y = e.clientY; drag.t = e.timeStamp; drag.lastInput = performance.now()
     }
   }
   const onLeave = () => { pointerInside = false }
   const onDown = (e: PointerEvent) => {
-    drag.active = true; drag.x = e.clientX; drag.y = e.clientY; drag.lastInput = performance.now()
+    if (e.pointerType === 'touch') {
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (touches.size === 2) { pinchDist = pinchSpan(); drag.active = false; return }
+    } else if (e.button !== 0) return
+    drag.active = true; drag.x = e.clientX; drag.y = e.clientY; drag.t = e.timeStamp; drag.lastInput = performance.now()
+    spinVel.yaw = 0; spinVel.pitch = 0
     pointerInside = false
-    canvas.setPointerCapture?.(e.pointerId)
+    if (e.pointerType !== 'touch') canvas.setPointerCapture?.(e.pointerId)
     canvas.style.cursor = 'grabbing'
   }
   const onUp = (e: PointerEvent) => {
+    touches.delete(e.pointerId)
+    if (touches.size < 2) pinchDist = 0
+    if (touches.size === 1) { // one finger left after a pinch: carry on rotating from there
+      const [rest] = [...touches.values()]
+      drag.active = true; drag.x = rest.x; drag.y = rest.y; drag.t = e.timeStamp
+      return
+    }
     drag.active = false; drag.lastInput = performance.now()
-    canvas.releasePointerCapture?.(e.pointerId)
+    if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId)
     canvas.style.cursor = 'grab'
   }
+  // Scrolling the page over the art must keep working; zoom only on Ctrl/Cmd+wheel or trackpad pinch.
   const onWheel = (e: WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return
     e.preventDefault()
-    zoom = Math.min(1.5, Math.max(0.55, zoom + e.deltaY * 0.001))
-    camera.position.z = baseDistance * zoom
+    setZoom(zoom + e.deltaY * (e.ctrlKey && Math.abs(e.deltaY) < 20 ? 0.01 : 0.002))
+  }
+  const onDouble = () => { // double-click / double-tap: reset the view
+    setZoom(1); spinVel.yaw = 0; spinVel.pitch = 0
+    if (points) points.rotation.x = 0
   }
   if (interactive) {
     canvas.style.cursor = 'grab'
+    // Vertical swipes scroll the page; horizontal drags and pinches are ours.
     canvas.style.touchAction = 'pan-y'
+    canvas.style.userSelect = 'none'
     canvas.addEventListener('pointerdown', onDown)
     canvas.addEventListener('pointerup', onUp)
     canvas.addEventListener('pointercancel', onUp)
+    canvas.addEventListener('dblclick', onDouble)
     canvas.addEventListener('wheel', onWheel, { passive: false })
   }
   canvas.addEventListener('pointerenter', onMove)
@@ -617,6 +684,7 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
       canvas.removeEventListener('pointerup', onUp)
       canvas.removeEventListener('pointercancel', onUp)
       canvas.removeEventListener('wheel', onWheel)
+      canvas.removeEventListener('dblclick', onDouble)
       geometry?.dispose()
       material.dispose()
       renderer.dispose()

@@ -18,7 +18,7 @@ export type ViewerExtras = {
   intro?: boolean
 }
 
-/** Props for <ProductViewer/> from a product row. Seed and serial make each piece visibly unique. */
+/** Props for <ProductViewer/> from a product row. The seed makes each piece visibly unique; no plaque is etched, so the art stays clean. */
 export function viewerProps(
   p: Pick<Product, 'asset_path' | 'asset_type' | 'palette' | 'viewer_config'> & Partial<Pick<Product, 'seed' | 'serial'>>,
   maxParticles?: number,
@@ -31,7 +31,6 @@ export function viewerProps(
     config: p.viewer_config,
     maxParticles,
     seed: p.seed ?? undefined,
-    serial: p.serial ?? undefined,
     ...extras,
   }
 }
