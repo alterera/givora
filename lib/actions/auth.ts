@@ -20,14 +20,29 @@ export async function loginAction(_: AuthState, form: FormData): Promise<AuthSta
   redirect(safeNext(form.get('next')))
 }
 
-export async function signupAction(_: AuthState, form: FormData): Promise<AuthState> {
+export type SignupState = { error?: string; values?: Record<string, string> } | undefined
+
+export async function signupAction(_: SignupState, form: FormData): Promise<SignupState> {
+  const get = (k: string) => String(form.get(k) ?? '').trim()
+  const values = { first_name: get('first_name'), last_name: get('last_name'), email: get('email'), phone: get('phone') }
+  const password = String(form.get('password') ?? '')
+  const confirm = String(form.get('confirm_password') ?? '')
+  const fail = (error: string): SignupState => ({ error, values })
+
+  if (!values.first_name || !values.last_name) return fail('Enter your first and last name.')
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) return fail('Enter a valid email address.')
+  if (values.phone && !/^[+()\-\s\d]{7,18}$/.test(values.phone)) return fail('Enter a valid phone number, or leave it blank.')
+  if (password.length < 8) return fail('Your password must be at least 8 characters.')
+  if (password !== confirm) return fail('The two passwords do not match.')
+
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
-    email: String(form.get('email') ?? '').trim(),
-    password: String(form.get('password') ?? ''),
+    email: values.email,
+    password,
+    options: { data: { first_name: values.first_name, last_name: values.last_name, phone: values.phone || null } },
   })
-  if (error) return { error: error.message }
-  if (!data.session) return { error: 'Account created but email confirmation is on. Disable "Confirm email" in Supabase for now.' }
+  if (error) return fail(error.message)
+  if (!data.session) return fail('Account created, but email confirmation is on. Turn off "Confirm email" in Supabase for now, or confirm via the email we sent.')
   redirect(safeNext(form.get('next')))
 }
 

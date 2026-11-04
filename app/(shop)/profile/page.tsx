@@ -113,7 +113,7 @@ async function Owned() {
 export default function ProfilePage() {
   return (
     <main className="container-x py-10 md:py-16">
-      <Suspense fallback={<div className="panel particle-skeleton relative h-72" />}><Owned /></Suspense>
+      <Suspense fallback={<div className="panel relative h-72 animate-pulse" />}><Owned /></Suspense>
     </main>
   )
 }

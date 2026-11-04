@@ -24,6 +24,7 @@ const SEGMENTS: Record<string, { label: string; href: string | null }> = {
   about: { label: 'About Us', href: '/about' },
   verify: { label: 'Certificate Check', href: '/verify' },
   login: { label: 'Log in', href: '/login' },
+  'forgot-password': { label: 'Forgot password', href: '/forgot-password' },
   signup: { label: 'Sign up', href: '/signup' },
 }
 

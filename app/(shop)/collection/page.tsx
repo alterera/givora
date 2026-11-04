@@ -36,7 +36,7 @@ export default function CollectionPage({ searchParams }: PageProps<'/collection'
       <p className="eyebrow mb-3">Collection · signed &amp; encrypted</p>
       <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl"><ScrambleText text="All Drops" /></h1>
       <p className="mb-8 max-w-xl text-[#a1a1a1]">Every piece is a one-of-one original with its own fingerprint, certificate and recorded history.</p>
-      <Suspense fallback={<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="panel particle-skeleton relative aspect-square" />)}</div>}>
+      <Suspense fallback={<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="panel relative aspect-square animate-pulse" />)}</div>}>
         <Grid searchParams={searchParams} />
       </Suspense>
     </main>

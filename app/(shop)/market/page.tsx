@@ -37,7 +37,7 @@ export default function MarketPage() {
       <p className="eyebrow mb-3">Marketplace</p>
       <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-4xl">Pieces for resale</h1>
       <p className="mb-10 max-w-xl text-[#a1a1a1]">Owners list pieces they are ready to pass on. Every sale is added to the piece&rsquo;s public provenance and pays the artist a royalty. <Link href="/#collection" className="link-underline text-white">Looking for new pieces?</Link></p>
-      <Suspense fallback={<div className="panel particle-skeleton relative h-72" />}><Listings /></Suspense>
+      <Suspense fallback={<div className="panel relative h-72 animate-pulse" />}><Listings /></Suspense>
     </main>
   )
 }

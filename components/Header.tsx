@@ -9,7 +9,7 @@ async function UserNav() {
     return (
       <>
         <Link href="/login" className="btn btn-sm btn-ghost">Log in</Link>
-        <Link href="/collection" className="btn btn-sm btn-primary hidden sm:inline-flex">Browse art</Link>
+        <Link href="/signup" className="btn btn-sm hidden sm:inline-flex">Sign up</Link>
       </>
     )
   }
@@ -42,7 +42,7 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-6 text-sm text-[#a1a1a1]">
             <Link href="/collection" className="link-underline">Collection</Link>
             <Link href="/market" className="link-underline">Marketplace</Link>
-            <Link href="/how-it-works" className="link-underline">How it works</Link>
+            <Link href="/how-it-works" className="link-underline">How It Works</Link>
           </nav>
         </div>
         <nav className="flex items-center gap-2">

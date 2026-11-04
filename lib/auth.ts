@@ -19,8 +19,11 @@ export async function requireUser(next = '/profile') {
 
 export async function requireAdmin() {
   const user = await requireUser('/admin')
-  const { data } = await createAdminClient()
-    .from('profiles').select('is_admin').eq('id', user.id).single()
+  const { data, error } = await createAdminClient()
+    .from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+  // A database error is not the same as "not an admin": say so instead of silently bouncing to /.
+  if (error) console.error('[auth] could not read profiles.is_admin:', error.message, '(run supabase/migrations/0005_grants.sql if this says "permission denied")')
+  else if (!data) console.error(`[auth] no profiles row for user ${user.id}; run supabase/migrations/0005_grants.sql`)
   if (!data?.is_admin) redirect('/')
   return user
 }
@@ -29,7 +32,8 @@ export async function requireAdmin() {
 export async function getViewer() {
   const user = await getUser()
   if (!user) return null
-  const { data } = await createAdminClient().from('profiles').select('is_admin').eq('id', user.id).single()
+  const { data, error } = await createAdminClient().from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+  if (error) console.error('[auth] could not read profiles.is_admin:', error.message)
   return { user, isAdmin: !!data?.is_admin }
 }
 

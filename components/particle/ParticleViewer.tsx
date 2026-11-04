@@ -65,7 +65,7 @@ export default function ParticleViewer({
   return (
     <div className={`${className?.includes('absolute') ? '' : 'relative '}${className ?? ''}`} style={{ background: config?.backgroundColor ?? '#000' }}>
       <div ref={host} style={{ position: 'absolute', inset: 0 }} />
-      {!ready && !error && <div className="particle-skeleton" aria-hidden />}
+      {!ready && !error && <div aria-hidden />}
       {error && <p className="absolute inset-0 grid place-items-center px-6 text-center text-xs text-red-300">{error}</p>}
     </div>
   )

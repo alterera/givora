@@ -86,7 +86,7 @@ export default function Home() {
           </div>
           <Link href="/collection" className="btn btn-sm">View all →</Link>
         </div>
-        <Suspense fallback={<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="panel particle-skeleton relative aspect-square" />)}</div>}>
+        <Suspense fallback={<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="panel relative aspect-square animate-pulse" />)}</div>}>
           <Collection />
         </Suspense>
       </section>
