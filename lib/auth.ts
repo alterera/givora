@@ -32,3 +32,6 @@ export async function getViewer() {
   const { data } = await createAdminClient().from('profiles').select('is_admin').eq('id', user.id).single()
   return { user, isAdmin: !!data?.is_admin }
 }
+
+/** Wall-clock time for request-time logic (kept out of components for the purity lint). */
+export const serverNow = () => Date.now()

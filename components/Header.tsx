@@ -41,6 +41,7 @@ export default function Header() {
           <Logo />
           <nav className="hidden md:flex items-center gap-6 text-sm text-[#a1a1a1]">
             <Link href="/#collection" className="link-underline">Collection</Link>
+            <Link href="/market" className="link-underline">Marketplace</Link>
             <Link href="/#how" className="link-underline">How it works</Link>
             <Link href="/#gifting" className="link-underline">Gifting</Link>
           </nav>

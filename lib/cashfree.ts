@@ -4,7 +4,7 @@ import crypto from 'node:crypto'
 const API_VERSION = '2023-08-01'
 
 function base() {
-  return process.env.CASHFREE_ENV === 'production'
+  return process.env.CASHFREE_ENV?.trim().toLowerCase() === 'production'
     ? 'https://api.cashfree.com/pg'
     : 'https://sandbox.cashfree.com/pg'
 }
@@ -13,8 +13,8 @@ function headers() {
   return {
     'Content-Type': 'application/json',
     'x-api-version': API_VERSION,
-    'x-client-id': process.env.CASHFREE_APP_ID!,
-    'x-client-secret': process.env.CASHFREE_SECRET_KEY!,
+    'x-client-id': process.env.CASHFREE_APP_ID!.trim(),
+    'x-client-secret': process.env.CASHFREE_SECRET_KEY!.trim(),
   }
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { createParticleViewer, type ViewerConfig } from '@/lib/particle/runtime'
+import { createParticleViewer, type ViewerApi, type ViewerConfig } from '@/lib/particle/runtime'
 
 export type ParticleViewerProps = {
   assetUrl: string
@@ -11,19 +11,23 @@ export type ParticleViewerProps = {
   maxParticles?: number
   interactive?: boolean
   intro?: boolean
+  seed?: number
+  serial?: string
+  owner?: boolean
+  onReady?: (api: ViewerApi | null) => void
   /** Only hold a WebGL context while on screen (browsers cap contexts at ~16). */
   lazy?: boolean
   className?: string
 }
 
 export default function ParticleViewer({
-  assetUrl, assetType, palette, config, maxParticles, interactive, intro, lazy, className,
+  assetUrl, assetType, palette, config, maxParticles, interactive, intro, seed, serial, owner, onReady, lazy, className,
 }: ParticleViewerProps) {
   const host = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [onScreen, setOnScreen] = useState(!lazy)
-  const key = JSON.stringify([assetUrl, assetType, palette, config, maxParticles, interactive, intro])
+  const key = JSON.stringify([assetUrl, assetType, palette, config, maxParticles, interactive, intro, seed, serial, owner])
 
   useEffect(() => {
     if (!lazy || !host.current) return
@@ -43,7 +47,7 @@ export default function ParticleViewer({
     const fade = setTimeout(() => { canvas.style.opacity = '1'; setReady(true) }, 120)
     try {
       viewer = createParticleViewer(canvas, {
-        assetUrl, assetType, palette, config, maxParticles, interactive, intro, onError: setError,
+        assetUrl, assetType, palette, config, maxParticles, interactive, intro, seed, serial, owner, onReady, onError: setError,
       })
     } catch (e) {
       const message = e instanceof Error ? e.message : 'WebGL is not available'

@@ -7,7 +7,7 @@ async function Dashboard() {
   await requireAdmin()
   const db = createAdminClient()
   const [{ data: products }, { data: orders }] = await Promise.all([
-    db.from('products').select('id, title, slug, price_inr, stock, sold, status').order('created_at', { ascending: false }),
+    db.from('products').select("id, title, slug, serial, price_inr, stock, sold, status").order('created_at', { ascending: false }),
     db.from('orders').select('id, buyer_email, amount, status, is_gift, created_at, products(title)').order('created_at', { ascending: false }).limit(50),
   ])
   const paid = (orders ?? []).filter((o) => o.status === 'paid')
@@ -22,15 +22,15 @@ async function Dashboard() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-medium">Products</h2>
-          <Link href="/admin/products/new" className="btn btn-primary">+ New product</Link>
+          <div className="flex gap-2"><Link href="/admin/ledger" className="btn">Ledger and holds</Link><Link href="/admin/products/new" className="btn btn-primary">+ New product</Link></div>
         </div>
         <div className="panel overflow-x-auto">
           <table className="table">
-            <thead><tr><th>Title</th><th>Price</th><th>Stock</th><th>Sold</th><th>Status</th><th /></tr></thead>
+            <thead><tr><th>Title</th><th>Serial</th><th>Price</th><th>Sold</th><th>Status</th><th /></tr></thead>
             <tbody>
               {products?.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.title}</td><td className="mono">₹{p.price_inr}</td><td className="mono">{p.stock}</td><td className="mono">{p.sold}</td>
+                  <td>{p.title}</td><td className="mono text-xs">{p.serial}</td><td className="mono">₹{p.price_inr}</td><td className="mono">{p.sold ? "yes" : "no"}</td>
                   <td><span className={`badge ${p.status === 'published' ? 'badge-live' : ''}`}>{p.status}</span></td>
                   <td className="text-right"><Link href={`/admin/products/${p.id}`} className="link-underline">Edit</Link></td>
                 </tr>

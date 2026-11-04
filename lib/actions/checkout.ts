@@ -6,7 +6,8 @@ import { createCashfreeOrder } from '@/lib/cashfree'
 
 export type CheckoutState = { error?: string; paymentSessionId?: string } | undefined
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const OCCASIONS = ['birthday', 'thank-you', 'anniversary', 'just-because']
+const EMAIL =/^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function startCheckout(_: CheckoutState, form: FormData): Promise<CheckoutState> {
   const slug = String(form.get('slug') ?? '')
@@ -15,6 +16,10 @@ export async function startCheckout(_: CheckoutState, form: FormData): Promise<C
   const recipient = String(form.get('recipient') ?? '').trim().toLowerCase()
   if (!EMAIL.test(email)) return { error: 'Enter a valid email.' }
   if (isGift && recipient && !EMAIL.test(recipient)) return { error: 'Recipient email is invalid.' }
+  const senderName = String(form.get('sender_name') ?? '').trim().slice(0, 60)
+  const message = String(form.get('message') ?? '').trim()
+  const occasion = String(form.get('occasion') ?? '')
+  if (message.length > 280) return { error: 'The gift message can be at most 280 characters.' }
 
   const db = createAdminClient()
   await db.rpc('expire_stale_orders')
@@ -28,6 +33,9 @@ export async function startCheckout(_: CheckoutState, form: FormData): Promise<C
   const { error: insertError } = await db.from('orders').insert({
     product_id: product.id, buyer_email: email, amount: product.price_inr,
     cashfree_order_id: cfOrderId, is_gift: isGift, gift_recipient_email: isGift && recipient ? recipient : null,
+    gift_sender_name: isGift && senderName ? senderName : null,
+    gift_message: isGift && message ? message : null,
+    gift_occasion: isGift && OCCASIONS.includes(occasion) ? occasion : null,
   })
   if (insertError) return { error: 'Could not create the order.' }
 

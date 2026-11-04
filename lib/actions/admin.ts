@@ -18,10 +18,10 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
   const title = String(form.get('title') ?? '').trim()
   const slug = String(form.get('slug') ?? '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-')
   const price = Number(form.get('price_inr'))
-  const stock = Number(form.get('stock'))
+  const royaltyPct = Number(form.get('royalty_pct') ?? 7.5)
   if (!title || !slug) return { error: 'Title and slug are required.' }
   if (!(price > 0)) return { error: 'Price must be greater than 0.' }
-  if (!Number.isInteger(stock) || stock < 0) return { error: 'Stock must be a whole number.' }
+  if (!(royaltyPct >= 0 && royaltyPct <= 20)) return { error: 'Artist royalty must be between 0 and 20%.' }
 
   const palette = ['palette1', 'palette2', 'palette3'].map((k) => String(form.get(k) ?? ''))
   if (!palette.every((c) => HEX.test(c))) return { error: 'Palette colours must be #rrggbb.' }
@@ -38,33 +38,50 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
     }
   }
 
+  // A minted piece is a public promise: its artwork and artist can never change.
+  const existing = id ? (await db.from('products').select('minted_at, artist_name').eq('id', id).single()).data : null
+  const minted = !!existing?.minted_at
+
+  const artistName = String(form.get('artist_name') ?? '')
+  if (minted && artistName !== existing?.artist_name) {
+    return { error: 'This piece is minted. The artist name can no longer be changed.' }
+  }
+
   const file = form.get('asset')
   let assetPath = String(form.get('asset_path') ?? '')
   let assetType = String(form.get('asset_type') ?? 'bin')
+  let fingerprint: string | undefined
   if (file instanceof File && file.size > 0) {
+    if (minted) return { error: 'This piece is minted. Its artwork file can no longer be replaced.' }
     const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
     if (ext === 'bin') assetType = 'bin'
     else if (ext === 'cloud') assetType = 'cloud'
     else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) assetType = 'image'
     else return { error: 'Upload a .glb model, a .bin point cloud, or a png/jpg/webp image.' }
+    const bytes = Buffer.from(await file.arrayBuffer())
+    fingerprint = crypto.createHash('sha256').update(bytes).digest('hex') // SHA-256 of the stored file
     assetPath = `${crypto.randomUUID()}.${ext}`
-    const { error } = await db.storage.from(ASSET_BUCKET).upload(assetPath, file, {
+    const { error } = await db.storage.from(ASSET_BUCKET).upload(assetPath, bytes, {
       contentType: ext === 'bin' || ext === 'cloud' ? 'application/octet-stream' : file.type,
     })
     if (error) return { error: `Upload failed: ${error.message}` }
   }
   if (!assetPath) return { error: 'An asset file is required.' }
 
-  const row = {
+  const row: Record<string, unknown> = {
     slug, title, description: String(form.get('description') ?? ''),
-    artist_name: String(form.get('artist_name') ?? ''),
-    price_inr: price, stock, asset_path: assetPath, asset_type: assetType,
+    artist_name: artistName, price_inr: price,
+    royalty_bps: Math.round(royaltyPct * 100),
+    asset_path: assetPath, asset_type: assetType,
     viewer_config: viewerConfig, palette,
     status: form.get('status') === 'published' ? 'published' : 'draft',
   }
+  if (fingerprint) row.fingerprint = fingerprint
+
+  // Stock is fixed at one copy per product; sales change it, never the form.
   const { error } = id
     ? await db.from('products').update(row).eq('id', id)
-    : await db.from('products').insert(row)
+    : await db.from('products').insert({ ...row, stock: 1 })
   if (error) return { error: error.message }
 
   revalidatePath('/', 'layout')

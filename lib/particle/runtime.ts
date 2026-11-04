@@ -56,6 +56,14 @@ export type ViewerOptions = {
   interactive?: boolean
   /** Morph from the default spindle into the artwork on load (default true). */
   intro?: boolean
+  /** Piece seed: makes particle layout and colour variation unique to this piece. */
+  seed?: number
+  /** Serial like "GIV-0042"; its number is etched into the cloud as a particle plaque. */
+  serial?: string
+  /** Owner viewing their own piece: enables the collector-only effect. */
+  owner?: boolean
+  /** Called with the viewer API (or null on dispose) so the page can offer captures. */
+  onReady?: (api: ViewerApi | null) => void
   onError?: (message: string) => void
 }
 
@@ -77,6 +85,13 @@ function spindleSample(count: number, rand: () => number, accent: string): Sampl
     colors[i * 3 + 2] = accentPoint ? ab : 1
   }
   return { positions, colors }
+}
+
+export type ViewerApi = {
+  /** Render one frame at width x height and return a PNG. */
+  capture(width: number, height: number): Promise<Blob>
+  /** Record the live canvas for `seconds` and return a webm. */
+  recordLoop(seconds?: number): Promise<Blob>
 }
 
 type Sample = { positions: Float32Array; colors: Float32Array }
@@ -253,6 +268,62 @@ function luminance(hex: string) {
   return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
 }
 
+/**
+ * Per-piece colour variation derived from the seed: a small hue rotation and saturation shift
+ * (hue ±8°, saturation ±6%) so every piece differs while the artist's palette still leads.
+ */
+function applySeedColour(sample: Sample, seed: number) {
+  const rand = random(seed * 7 + 1)
+  const angle = ((rand() - 0.5) * 16 * Math.PI) / 180
+  const sat = 1 + (rand() - 0.5) * 0.12
+  const cos = Math.cos(angle), sin = Math.sin(angle)
+  // Hue rotation about the grey axis (standard matrix) followed by a saturation scale.
+  const m = [
+    0.213 + cos * 0.787 - sin * 0.213, 0.715 - cos * 0.715 - sin * 0.715, 0.072 - cos * 0.072 + sin * 0.928,
+    0.213 - cos * 0.213 + sin * 0.143, 0.715 + cos * 0.285 + sin * 0.140, 0.072 - cos * 0.072 - sin * 0.283,
+    0.213 - cos * 0.213 - sin * 0.787, 0.715 - cos * 0.715 + sin * 0.715, 0.072 + cos * 0.928 + sin * 0.072,
+  ]
+  const c = sample.colors
+  for (let i = 0; i < c.length; i += 3) {
+    const r = c[i], g = c[i + 1], b = c[i + 2]
+    const nr = m[0] * r + m[1] * g + m[2] * b
+    const ng = m[3] * r + m[4] * g + m[5] * b
+    const nb = m[6] * r + m[7] * g + m[8] * b
+    const l = 0.299 * nr + 0.587 * ng + 0.114 * nb
+    c[i] = Math.min(1, Math.max(0, l + (nr - l) * sat))
+    c[i + 1] = Math.min(1, Math.max(0, l + (ng - l) * sat))
+    c[i + 2] = Math.min(1, Math.max(0, l + (nb - l) * sat))
+  }
+}
+
+/** Etch the serial number into the cloud: a small plaque of particles under the artwork. */
+function etchSerial(sample: Sample, serial: string, total: number) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 176; canvas.height = 40
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return
+  ctx.fillStyle = '#fff'
+  ctx.font = '700 30px ui-monospace, Menlo, Consolas, monospace'
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+  ctx.fillText(`GIV·${serial}`, 88, 21)
+  const data = ctx.getImageData(0, 0, 176, 40).data
+  const pts: [number, number][] = []
+  for (let y = 0; y < 40; y++) for (let x = 0; x < 176; x++) if (data[(y * 176 + x) * 4 + 3] > 128) pts.push([x, y])
+  if (!pts.length) return
+  const reps = Math.max(1, Math.min(6, Math.floor((total * 0.025) / pts.length)))
+  const count = Math.min(total, pts.length * reps)
+  const rand = random(99)
+  const scale = 9.5 / 176 // plaque ~9.5 units wide
+  for (let j = 0; j < count; j++) {
+    const i = Math.floor((j / count) * total) // evenly spread replaced particles through the cloud
+    const [px, py] = pts[j % pts.length]
+    sample.positions[i * 3] = (px - 88) * scale + (rand() - 0.5) * 0.04
+    sample.positions[i * 3 + 1] = -19.5 - (py - 20) * scale + (rand() - 0.5) * 0.04
+    sample.positions[i * 3 + 2] = (rand() - 0.5) * 0.15
+    sample.colors[i * 3] = 0.95; sample.colors[i * 3 + 1] = 0.95; sample.colors[i * 3 + 2] = 0.95
+  }
+}
+
 /** Try progressively simpler attributes; a null context makes THREE crash with a cryptic error. */
 function createContext(canvas: HTMLCanvasElement) {
   const attempts: [string, WebGLContextAttributes][] = [
@@ -284,13 +355,16 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000)
   const deviceRatio = Math.min(window.devicePixelRatio || 1, 2)
+  // The collector-only effect: owners see a slow scan shimmer unless the artist set their own effect.
+  const effectName = options.owner && cfg.effect === 'default' ? 'scan' : cfg.effect
+  const seedBase = options.seed ?? 11
 
   const lightness = luminance(cfg.backgroundColor)
   const custom = new THREE.Color(cfg.customColor)
   const uniforms = {
     uTime: { value: 0 }, uMorph: { value: 1 }, uProgress: { value: 0 }, uStyle: { value: 1 },
     uStrength: { value: 1 }, uGlow: { value: cfg.glow }, uPointSize: { value: cfg.particleSize },
-    uEffectMode: { value: IMAGE_TRANSITION_EFFECT_MODES[cfg.effect as keyof typeof IMAGE_TRANSITION_EFFECT_MODES] ?? 0 },
+    uEffectMode: { value: IMAGE_TRANSITION_EFFECT_MODES[effectName as keyof typeof IMAGE_TRANSITION_EFFECT_MODES] ?? 0 },
     uEffectIntensity: { value: 0 }, uEffectStrength: { value: cfg.effectStrength }, uEffectSpeed: { value: cfg.effectSpeed },
     uHoverMode: { value: IMAGE_TRANSITION_HOVER_MODES[cfg.hoverEffect as keyof typeof IMAGE_TRANSITION_HOVER_MODES] ?? 0 },
     uHoverPointer: { value: new THREE.Vector2(2, 2) }, uHoverIntensity: { value: 0 },
@@ -349,8 +423,8 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
 
   function frame(dt: number) {
     time += dt * 0.48
-    effectIntensity += ((cfg.effect === 'default' ? 0 : 1) - effectIntensity) * Math.min(1, dt * 4.8)
-    if (cfg.effect === 'explode') {
+    effectIntensity += ((effectName === 'default' ? 0 : 1) - effectIntensity) * Math.min(1, dt * 4.8)
+    if (effectName === 'explode') {
       explosionTime += dt * 0.96
       if (explosionTime > 2) explosionTime = 0
     }
@@ -364,7 +438,7 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
     autoBlend += ((userHolding ? 0 : 1) - autoBlend) * Math.min(1, dt * 5)
     if (points) {
       if (cfg.motion === 'spin' || (interactive && cfg.motion === 'sway')) {
-        points.rotation.y += dt * (cfg.effect === 'vortex' ? 0.48 * (0.5 + effectIntensity) : 0.15) * autoBlend
+        points.rotation.y += dt * (effectName === 'vortex' ? 0.48 * (0.5 + effectIntensity) : 0.15) * autoBlend
         points.rotation.z += dt * 0.06 * autoBlend
         points.rotation.x += (Math.sin(time * 0.15) * 0.12 - points.rotation.x) * Math.min(1, dt * 4.8) * autoBlend
       } else if (cfg.motion === 'sway') {
@@ -453,12 +527,14 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
       const total = Math.max(5000, Math.min(150000, Math.round(options.maxParticles ?? cfg.particleCount)))
       const sample =
         options.assetType === 'cloud'
-          ? cloudSample(await loadBakedCloud(options.assetUrl), total, random(11))
+          ? cloudSample(await loadBakedCloud(options.assetUrl), total, random(seedBase))
           : options.assetType === 'bin'
-          ? cloudSample(await loadCloud(options.assetUrl, options.palette), total, random(11))
-          : imageSample(await loadImage(options.assetUrl), total, random(11))
+          ? cloudSample(await loadCloud(options.assetUrl, options.palette), total, random(seedBase))
+          : imageSample(await loadImage(options.assetUrl), total, random(seedBase))
       if (disposed) return
-      const rand = random(5)
+      if (options.seed != null) applySeedColour(sample, options.seed)
+      if (options.serial) etchSerial(sample, options.serial.replace(/^GIV-/, ''), total)
+      const rand = random(seedBase + 5)
       const offsets = new Float32Array(total * 3)
       for (let j = 0; j < offsets.length; j++) offsets[j] = (rand() - 0.5) * 2
       const normals = new Float32Array(total * 3)
@@ -485,8 +561,49 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
     }
   })()
 
+  const api: ViewerApi = {
+    capture(width, height) {
+      return new Promise((resolve, reject) => {
+        const max = Math.min(renderer.capabilities.maxTextureSize, 8192)
+        const w = Math.min(width, max), h = Math.min(height, max)
+        const cssW = Math.max(1, canvas.clientWidth)
+        renderer.setPixelRatio(1)
+        renderer.setSize(w, h, false)
+        camera.aspect = w / h
+        camera.updateProjectionMatrix()
+        uniforms.uViewportAspect.value = w / h
+        // Keep particles the same apparent size at the larger resolution.
+        uniforms.uPointSize.value = cfg.particleSize * (w / (cssW * deviceRatio))
+        renderer.render(scene, camera)
+        canvas.toBlob((blob) => {
+          resize() // back to the on-page size
+          if (!raf) frame(0)
+          if (blob) resolve(blob)
+          else reject(new Error('Could not capture the image.'))
+        }, 'image/png')
+      })
+    },
+    recordLoop(seconds = 6) {
+      return new Promise((resolve, reject) => {
+        if (typeof MediaRecorder === 'undefined') return reject(new Error('Recording is not supported in this browser.'))
+        const stream = canvas.captureStream(30)
+        const mime = ['video/webm;codecs=vp9', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m))
+        const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 })
+        const chunks: Blob[] = []
+        rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data) }
+        rec.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }))
+        rec.onerror = () => reject(new Error('Recording failed.'))
+        rec.start()
+        setTimeout(() => rec.state !== 'inactive' && rec.stop(), seconds * 1000)
+      })
+    },
+  }
+  options.onReady?.(api)
+
   return {
+    ...api,
     dispose() {
+      options.onReady?.(null)
       disposed = true
       if (raf) cancelAnimationFrame(raf)
       raf = 0

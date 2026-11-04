@@ -21,7 +21,7 @@ async function Result({ searchParams }: { searchParams: Promise<{ order_id?: str
 
   const db = createAdminClient()
   const { data: order } = await db
-    .from('orders').select('id, status, is_gift, gift_recipient_email, products(title)').eq('cashfree_order_id', order_id).single()
+    .from('orders').select('id, status, kind, is_gift, gift_recipient_email, products(title, serial)').eq('cashfree_order_id', order_id).single()
   if (!order) return <Shell eyebrow="Order" title="Order not found" />
 
   if (order.status !== 'paid') {
@@ -32,6 +32,18 @@ async function Result({ searchParams }: { searchParams: Promise<{ order_id?: str
       </Shell>
     )
   }
+  if (order.kind === 'resale') {
+    const rp = order.products as unknown as { title: string; serial: string | null }
+    return (
+      <Shell eyebrow="Payment successful" title={`${rp.title} is now yours`}>
+        <p className="max-w-md text-[#a1a1a1]">The sale has been added to its public provenance. You can show it, download your collector extras, or sell it on.</p>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/profile" className="btn btn-primary btn-lg">Open my collection</Link>
+          {rp.serial && <Link href={`/certificate/${rp.serial}`} className="btn btn-lg">View certificate</Link>}
+        </div>
+      </Shell>
+    )
+  }
   const { data: edition } = await db.from('editions').select('claim_token, edition_no').eq('order_id', order.id).single()
   if (!edition) return <Shell eyebrow="Payment received" title="Preparing your edition…"><p className="text-[#a1a1a1]">Refresh in a few seconds.</p></Shell>
 
@@ -39,7 +51,7 @@ async function Result({ searchParams }: { searchParams: Promise<{ order_id?: str
   const link = `${site}/redeem/${edition.claim_token}`
   const product = order.products as unknown as { title: string }
   return (
-    <Shell eyebrow={`Payment successful · Edition #${edition.edition_no}`} title={order.is_gift ? 'Your gift is ready' : `${product.title} is yours`}>
+    <Shell eyebrow={"Payment successful · 1 of 1"} title={order.is_gift ? 'Your gift is ready' : `${product.title} is yours`}>
       {order.is_gift ? (
         <>
           <p className="max-w-md text-[#a1a1a1]">Share this link with the recipient. Whoever opens it first can redeem the gift, once.</p>
