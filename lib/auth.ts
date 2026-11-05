@@ -1,15 +1,18 @@
 import 'server-only'
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { connection } from 'next/server'
 import { createClient } from '@/lib/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 
-export async function getUser() {
+// React's cache() de-duplicates these within one request: the header, the page and metadata all ask
+// "who is this?", but Supabase is only called once.
+export const getUser = cache(async () => {
   await connection() // supabase-js reads Date.now(); defer to request time
   const supabase = await createClient()
   const { data } = await supabase.auth.getUser()
   return data.user
-}
+})
 
 export async function requireUser(next = '/profile') {
   const user = await getUser()
@@ -29,13 +32,13 @@ export async function requireAdmin() {
 }
 
 /** Current user plus admin flag (for navigation). */
-export async function getViewer() {
+export const getViewer = cache(async () => {
   const user = await getUser()
   if (!user) return null
   const { data, error } = await createAdminClient().from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
   if (error) console.error('[auth] could not read profiles.is_admin:', error.message)
   return { user, isAdmin: !!data?.is_admin }
-}
+})
 
 /** Wall-clock time for request-time logic (kept out of components for the purity lint). */
 export const serverNow = () => Date.now()

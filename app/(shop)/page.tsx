@@ -9,17 +9,19 @@ import Reveal from '@/components/Reveal'
 import ScrambleText from '@/components/ScrambleText'
 import NewsletterCta from '@/components/NewsletterCta'
 
+export const metadata = { alternates: { canonical: '/' } }
+
 const HOME_COUNT = 8
 
 async function Hero() {
-  const { products } = await getPublished({ limit: 1 })
+  const { products } = await getPublished({ limit: HOME_COUNT }) // same cache entry as the grid below
   const featured = products[0]
   return (
     <section className="relative isolate overflow-hidden border-b border-[var(--line)]">
       <div className="absolute inset-0 -z-10 grid-bg opacity-60" />
       {featured && (
         <div className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-full select-none opacity-90 md:w-[62%]">
-          <ProductViewer {...viewerProps(featured, 60000)} className="h-full w-full" />
+          <ProductViewer {...viewerProps(featured, 40000)} className="h-full w-full" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent md:via-transparent" />
         </div>
       )}

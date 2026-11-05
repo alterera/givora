@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import LegalPage from '@/components/LegalPage'
 
-export const metadata = { title: 'Privacy Policy · Givora World' }
+export const metadata = {
+  title: 'Privacy Policy',
+  description: 'What Givora World collects, why, who processes it, and the choices you have.',
+  alternates: { canonical: '/privacy' },
+}
 
 export default function PrivacyPage() {
   return (

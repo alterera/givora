@@ -5,6 +5,12 @@ import { viewerProps, type Product } from '@/lib/products'
 import { inr } from '@/lib/format'
 import ProductViewer from '@/components/particle/ProductViewer'
 
+export const metadata = {
+  title: 'Marketplace',
+  description: 'Pieces collectors are ready to pass on. Every resale is added to the artwork’s public provenance and pays the artist a royalty.',
+  alternates: { canonical: '/market' },
+}
+
 async function Listings() {
   const { data } = await createAdminClient()
     .from('listings').select('id, price, products(*)').eq('kind', 'public').eq('status', 'active').order('created_at', { ascending: false })

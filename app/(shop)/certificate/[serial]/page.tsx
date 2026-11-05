@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { createAdminClient, assetUrl } from '@/lib/supabase-admin'
@@ -8,6 +9,7 @@ import { getOpenListing, getPieceState, getProvenance } from '@/lib/pieces'
 import { fmtDate, inr } from '@/lib/format'
 import ProductViewer from '@/components/particle/ProductViewer'
 import Provenance from '@/components/Provenance'
+import { getProductBySerial } from '@/lib/catalog'
 import VerifyFile from '@/components/VerifyFile'
 
 function Row({ k, children }: { k: string; children: React.ReactNode }) {
@@ -97,6 +99,21 @@ async function Certificate({ params }: { params: Promise<{ serial: string }> }) 
       </div>
     </main>
   )
+}
+
+export async function generateMetadata({ params }: PageProps<'/certificate/[serial]'>): Promise<Metadata> {
+  const { serial } = await params
+  const p = await getProductBySerial(serial)
+  if (!p) return { title: 'Certificate not found', robots: { index: false, follow: false } }
+  const title = `${p.serial} · Certificate for ${p.title}`
+  const description = `Public certificate of authenticity for ${p.title} by ${p.artist_name || 'an independent artist'}: fingerprint, mint date, current owner and recorded provenance.`
+  return {
+    title,
+    description,
+    alternates: { canonical: `/certificate/${p.serial}` },
+    openGraph: { type: 'website', title, description, url: `/certificate/${p.serial}`, images: [{ url: `/og/${p.slug}`, width: 1200, height: 630, alt: p.title }] },
+    twitter: { card: 'summary_large_image', title, description, images: [`/og/${p.slug}`] },
+  }
 }
 
 export default function CertificatePage({ params }: PageProps<'/certificate/[serial]'>) {

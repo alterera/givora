@@ -5,6 +5,12 @@ import Pagination from '@/components/Pagination'
 import HashBand from '@/components/HashBand'
 import ScrambleText from '@/components/ScrambleText'
 
+export const metadata = {
+  title: 'Collection',
+  description: 'Browse every one-of-one digital particle artwork on Givora World. Each piece has its own serial, certificate and recorded history.',
+  alternates: { canonical: '/collection' },
+}
+
 const PAGE_SIZE = 12
 
 async function Grid({ searchParams }: { searchParams: Promise<{ page?: string }> }) {

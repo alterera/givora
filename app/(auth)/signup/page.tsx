@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import SignupForm from '@/components/SignupForm'
 
-export const metadata = { title: 'Sign up · Givora World' }
+export const metadata = { title: 'Sign up' }
 
 async function Form({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams

@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import LegalPage from '@/components/LegalPage'
 
-export const metadata = { title: 'Refund Policy · Givora World' }
+export const metadata = {
+  title: 'Refund Policy',
+  description: 'When Givora World refunds a purchase, how refunds are paid and how to request one.',
+  alternates: { canonical: '/refund-policy' },
+}
 
 export default function RefundPage() {
   return (

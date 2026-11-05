@@ -1,7 +1,7 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
-import { createAdminClient } from '@/lib/supabase-admin'
 import { getUser } from '@/lib/auth'
 import { viewerProps, type Product } from '@/lib/products'
 import { getOpenListing, getPieceState, getProvenance } from '@/lib/pieces'
@@ -10,10 +10,11 @@ import ProductViewer from '@/components/particle/ProductViewer'
 import ProductCard from '@/components/ProductCard'
 import Reveal from '@/components/Reveal'
 import LiveViewers from '@/components/LiveViewers'
-import { getPublished, lastSales } from '@/lib/catalog'
+import { getProductBySlug, getPublished, lastSales } from '@/lib/catalog'
+import { SITE_NAME, SITE_URL } from '@/lib/site'
 
 async function Similar({ product }: { product: Product }) {
-  const { products } = await getPublished({ excludeId: product.id, limit: 24 })
+  const { products } = await getPublished({ excludeId: product.id, limit: 12 })
   // Same artist first, then the newest of the rest.
   const picks = [...products.filter((p) => p.artist_name && p.artist_name === product.artist_name), ...products.filter((p) => !p.artist_name || p.artist_name !== product.artist_name)].slice(0, 4)
   if (!picks.length) return null
@@ -35,16 +36,35 @@ async function Similar({ product }: { product: Product }) {
 
 async function Detail({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const { data } = await createAdminClient().from('products').select('*').eq('slug', slug).eq('status', 'published').single()
-  if (!data) notFound()
-  const p = data as Product
+  const p = await getProductBySlug(slug) // cached + shared with generateMetadata
+  if (!p) notFound()
 
   const [state, prov, listing, user] = await Promise.all([getPieceState(p.id), getProvenance(p.id), getOpenListing(p.id), getUser()])
   const isOwner = !!user && state.ownerId === user.id
   const available = p.stock > 0 && !state.editionId
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: p.title,
+    description: p.description?.trim() || `${p.title}, a one-of-one digital particle artwork on ${SITE_NAME}.`,
+    sku: p.serial ?? p.slug,
+    image: `${SITE_URL}/og/${p.slug}`,
+    url: `${SITE_URL}/products/${p.slug}`,
+    brand: { '@type': 'Brand', name: SITE_NAME },
+    ...(p.artist_name ? { creator: { '@type': 'Person', name: p.artist_name } } : {}),
+    offers: {
+      '@type': 'Offer',
+      url: `${SITE_URL}/products/${p.slug}`,
+      priceCurrency: 'INR',
+      price: Number(p.price_inr).toFixed(2),
+      availability: available ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+  }
 
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, String.fromCharCode(92) + 'u003c') }} />
     <div className="container-x grid gap-8 py-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12 lg:py-10">
       <div className="reveal mx-auto flex w-full max-w-xl flex-col gap-3 lg:sticky lg:top-20 lg:mx-0 lg:max-w-none lg:self-start">
         <LiveViewers seed={p.slug} />
@@ -145,6 +165,23 @@ function ProductSkeleton() {
       </div>
     </main>
   )
+}
+
+export async function generateMetadata({ params }: PageProps<'/products/[slug]'>): Promise<Metadata> {
+  const { slug } = await params
+  const p = await getProductBySlug(slug)
+  if (!p) return { title: 'Piece not found', robots: { index: false, follow: false } }
+  const title = `${p.title} by ${p.artist_name || 'Unknown artist'}`
+  const description = p.description?.trim().replace(/\s+/g, ' ').slice(0, 155)
+    || `${p.title}, a one-of-one digital particle artwork${p.serial ? ` (${p.serial})` : ''} on ${SITE_NAME}. Collect it, gift it or resell it.`
+  const image = { url: `/og/${p.slug}`, width: 1200, height: 630, alt: title }
+  return {
+    title,
+    description,
+    alternates: { canonical: `/products/${p.slug}` },
+    openGraph: { type: 'website', title, description, url: `/products/${p.slug}`, images: [image] },
+    twitter: { card: 'summary_large_image', title, description, images: [image.url] },
+  }
 }
 
 export default function ProductPage({ params }: PageProps<'/products/[slug]'>) {

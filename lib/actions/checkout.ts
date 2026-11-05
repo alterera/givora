@@ -22,8 +22,11 @@ export async function startCheckout(_: CheckoutState, form: FormData): Promise<C
   if (message.length > 280) return { error: 'The gift message can be at most 280 characters.' }
 
   const db = createAdminClient()
-  await db.rpc('expire_stale_orders')
-  const { data: product } = await db.from('products').select('id, price_inr').eq('slug', slug).eq('status', 'published').single()
+  // Independent reads run together: one round-trip instead of two.
+  const [, { data: product }] = await Promise.all([
+    db.rpc('expire_stale_orders'),
+    db.from('products').select('id, price_inr').eq('slug', slug).eq('status', 'published').maybeSingle(),
+  ])
   if (!product) return { error: 'Product not found.' }
 
   const { data: reserved } = await db.rpc('reserve_stock', { p_product: product.id })

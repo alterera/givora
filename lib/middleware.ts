@@ -2,6 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname
+  const protectedPath = path.startsWith('/profile') || path.startsWith('/admin')
+  // Anonymous visitors (and crawlers) have no session to refresh: skip the auth round-trip entirely.
+  const hasSession = request.cookies.getAll().some((c) => c.name.startsWith('sb-'))
+  if (!hasSession && !protectedPath) return NextResponse.next({ request })
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -27,8 +33,7 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
 
-  const path = request.nextUrl.pathname
-  if (!user && (path.startsWith('/profile') || path.startsWith('/admin'))) {
+  if (!user && protectedPath) {
     // Optimistic check only; real authorization happens server-side (lib/auth.ts).
     const url = request.nextUrl.clone()
     url.pathname = '/login'

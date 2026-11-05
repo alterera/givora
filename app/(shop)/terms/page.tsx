@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import LegalPage from '@/components/LegalPage'
 
-export const metadata = { title: 'Terms of Use · Givora World' }
+export const metadata = {
+  title: 'Terms of Use',
+  description: 'The terms governing purchases, ownership, gifting and resale on Givora World.',
+  alternates: { canonical: '/terms' },
+}
 
 export default function TermsPage() {
   return (

@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { useActionState } from 'react'
 import { loginAction, type AuthState } from '@/lib/actions/auth'
 
-export default function AuthForm({ next }: { next: string }) {
+export default function AuthForm({ next, notice }: { next: string; notice?: string }) {
   const [state, login, pending] = useActionState<AuthState, FormData>(loginAction, undefined)
   const q = next !== '/profile' ? `?next=${encodeURIComponent(next)}` : ''
   return (
     <form action={login} className="flex flex-col gap-4">
+      {notice && <p role="status" className="glow-box p-3 text-sm text-[#b9d9cb]">{notice}</p>}
       <input type="hidden" name="next" value={next} />
       <div><label className="label" htmlFor="a-email">Email</label><input id="a-email" name="email" type="email" autoComplete="email" required className="input" /></div>
       <div>

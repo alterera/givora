@@ -2,7 +2,11 @@ import CertificateLookup from '@/components/CertificateLookup'
 import Reveal from '@/components/Reveal'
 import ScrambleText from '@/components/ScrambleText'
 
-export const metadata = { title: 'Certificate Check · Givora World' }
+export const metadata = {
+  title: 'Certificate Check',
+  description: 'Resolve a Givora serial to its public certificate: artist, mint date, fingerprint, current owner and full provenance.',
+  alternates: { canonical: '/verify' },
+}
 
 const STAGES = [
   ['RESOLVE_SERIAL', 'Locate the attestation', 'The 48-bit serial is resolved to a single public attestation record.'],

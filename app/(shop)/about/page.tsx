@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import Reveal from '@/components/Reveal'
 
-export const metadata = { title: 'About Us · Givora World' }
+export const metadata = {
+  title: 'About Us',
+  description: 'Givora World is a gallery for one-of-one particle-cloud artworks: collect, gift or resell pieces with a public certificate and tamper-evident history.',
+  alternates: { canonical: '/about' },
+}
 
 const VALUES = [
   ['One of one', 'Every piece exists once. No editions, no reprints, no inflation.'],

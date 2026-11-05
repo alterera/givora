@@ -2,7 +2,7 @@
 
 import crypto from 'node:crypto'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { requireAdmin } from '@/lib/auth'
 import { createAdminClient, ASSET_BUCKET } from '@/lib/supabase-admin'
 
@@ -57,6 +57,7 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
     assetPath = `${crypto.randomUUID()}.${ext}`
     const { error } = await db.storage.from(ASSET_BUCKET).upload(assetPath, bytes, {
       contentType: ext === 'cloud' ? 'application/octet-stream' : file.type,
+      cacheControl: '31536000', // file names are random UUIDs, so each file is immutable
     })
     if (error) return { error: `Upload failed: ${error.message}` }
   }
@@ -79,5 +80,6 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
   if (error) return { error: error.message }
 
   revalidatePath('/', 'layout')
+  updateTag('products') // drop the cached catalogue so the change shows immediately
   redirect('/admin')
 }

@@ -2,7 +2,11 @@ import Link from 'next/link'
 import Reveal from '@/components/Reveal'
 import ScrambleText from '@/components/ScrambleText'
 
-export const metadata = { title: 'How it works · Givora World' }
+export const metadata = {
+  title: 'How it works',
+  description: 'How Givora World attests, settles and records every one-of-one artwork: fingerprint attestation, atomic custody transfer and a hash-chained provenance ledger.',
+  alternates: { canonical: '/how-it-works' },
+}
 
 const PIPELINE = [
   ['00', 'ENTROPY_SEED', 'Deterministic generative seeding', 'At mint, a unique entropy seed is derived and bound to the piece. It parameterises the particle manifold, so the chromatic distribution of every point cloud is irreproducible.', 'seed = KDF(entropy ∥ serial)'],
