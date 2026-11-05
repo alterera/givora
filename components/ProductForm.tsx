@@ -7,7 +7,7 @@ import { saveProductAction, type AdminState } from '@/lib/actions/admin'
 type Initial = {
   id?: string; slug?: string; title?: string; description?: string; artist_name?: string
   price_inr?: number; royalty_bps?: number; asset_path?: string; asset_type?: string
-  viewer_config?: Record<string, unknown>; palette?: string[]; status?: string
+  viewer_config?: Record<string, unknown>; status?: string
   serial?: string | null; minted_at?: string | null; fingerprint?: string | null; seed?: number | null
 }
 
@@ -28,13 +28,12 @@ export default function ProductForm({ initial = {} }: { initial?: Initial }) {
     }
     return saveProductAction(prev, form)
   }, undefined)
-  const palette = initial.palette ?? ['#0dffab', '#1456ff', '#8dcaff']
 
   return (
     <form action={action} className="grid max-w-3xl gap-6">
       <input type="hidden" name="id" defaultValue={initial.id ?? ''} />
       <input type="hidden" name="asset_path" defaultValue={initial.asset_path ?? ''} />
-      <input type="hidden" name="asset_type" defaultValue={initial.asset_type ?? 'bin'} />
+      <input type="hidden" name="asset_type" defaultValue={initial.asset_type ?? 'cloud'} />
 
       <fieldset className="panel grid gap-4 p-5 md:grid-cols-2">
         <legend className="eyebrow px-2">Details</legend>
@@ -58,13 +57,9 @@ export default function ProductForm({ initial = {} }: { initial?: Initial }) {
         )}
         <div>
           <label className="label">
-            Upload .glb (colours kept), .bin from Particleify, or png/jpg/webp{initial.asset_path && <> · current: <span className="mono">{initial.asset_path}</span></>}
+            Upload a .glb (colours kept) or a png/jpg/webp image{initial.asset_path && <> · current: <span className="mono">{initial.asset_path}</span></>}
           </label>
-          <input name="asset" type="file" disabled={!!initial.minted_at} accept=".glb,.bin,.png,.jpg,.jpeg,.webp" className="input h-auto py-2 file:mr-3 file:border-0 file:bg-[var(--g)] file:px-3 file:py-1 file:text-black" />
-        </div>
-        <div>
-          <label className="label">Palette (used for .bin clouds only)</label>
-          <div className="flex gap-3">{palette.map((c, i) => <input key={i} name={`palette${i + 1}`} type="color" defaultValue={c} className="h-10 w-14 cursor-pointer border border-[var(--line)] bg-black p-1" />)}</div>
+          <input name="asset" type="file" disabled={!!initial.minted_at} accept=".glb,.png,.jpg,.jpeg,.webp" className="input h-auto py-2 file:mr-3 file:border-0 file:bg-[var(--g)] file:px-3 file:py-1 file:text-black" />
         </div>
         <div>
           <label className="label">Viewer config JSON (paste a Particleify CONFIG; non-visual keys are dropped)</label>

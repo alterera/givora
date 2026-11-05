@@ -30,7 +30,7 @@ const SEGMENTS: Record<string, { label: string; href: string | null }> = {
 
 function humanize(s: string) {
   const d = decodeURIComponent(s)
-  if (/^[A-Za-z]+-\d+$/.test(d)) return d.toUpperCase() // serials such as GIV-0042
+  if (/^GIV(-[0-9A-Fa-f]{4}){3}$/i.test(d)) return d.toUpperCase() // serials such as GIV-7F3A-91C2-D4E8
   if (d.length > 24 && /^[0-9a-f-]+$/i.test(d)) return `${d.slice(0, 8)}…`
   return d.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }

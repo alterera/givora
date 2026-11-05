@@ -45,7 +45,7 @@ export default function HowItWorksPage() {
             Each artwork is a cryptographically attested, single-custody asset. From entropy seeding to hash-chained history, this is the pipeline that makes one-of-one verifiable.
           </p>
           <div className="reveal d3 terminal mt-8 max-w-2xl overflow-hidden p-4 text-xs leading-6 text-[#6fa88f]">
-            <p><span className="text-[var(--g)]">$</span> givora verify --serial GIV-0042</p>
+            <p><span className="text-[var(--g)]">$</span> givora verify --serial GIV-7F3A-91C2-D4E8</p>
             <p className="break-all text-[#3f8f6c]">{HEX}</p>
             <p><span className="text-[var(--g)]">✓</span> origin attested &nbsp;<span className="text-[var(--g)]">✓</span> custody unique &nbsp;<span className="text-[var(--g)]">✓</span> chain intact<span className="ml-1 inline-block h-3 w-1.5 translate-y-0.5 animate-pulse bg-[var(--g)]" /></p>
           </div>

@@ -47,7 +47,7 @@ export const DEFAULT_VIEWER_CONFIG: ViewerConfig = {
 
 export type ViewerOptions = {
   assetUrl: string
-  assetType: 'bin' | 'image' | 'cloud'
+  assetType: 'image' | 'cloud'
   palette: string[]
   config?: Partial<ViewerConfig>
   /** Override particle count (e.g. low for grid cards). */
@@ -119,23 +119,6 @@ function morton(x: number, y: number) {
   return (spread(x) | (spread(y) << 1)) >>> 0
 }
 
-function hash(x: number, y: number, z: number) {
-  const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453
-  return h - Math.floor(h)
-}
-function noise(x: number, y: number, z: number) {
-  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z)
-  let fx = x - ix, fy = y - iy, fz = z - iz
-  fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); fz = fz * fz * (3 - 2 * fz)
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-  const c = (dx: number, dy: number, dz: number) => hash(ix + dx, iy + dy, iz + dz)
-  return lerp(
-    lerp(lerp(c(0, 0, 0), c(1, 0, 0), fx), lerp(c(0, 1, 0), c(1, 1, 0), fx), fy),
-    lerp(lerp(c(0, 0, 1), c(1, 0, 1), fx), lerp(c(0, 1, 1), c(1, 1, 1), fx), fy),
-    fz
-  )
-}
-
 function hexRgb(hex: string): [number, number, number] {
   const v = parseInt(hex.replace('#', ''), 16)
   return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255]
@@ -151,32 +134,6 @@ async function loadBakedCloud(url: string) {
   const rgb = new Uint8Array(buffer, count * 12, count * 3)
   const colors = new Float32Array(count * 3)
   for (let i = 0; i < colors.length; i++) colors[i] = rgb[i] / 255
-  return { positions, colors, count }
-}
-
-/** Baked .bin cloud (Int16 xyz) -> positions/colours, same maths as Particleify's loadPointCloud. */
-async function loadCloud(url: string, paletteHex: string[]) {
-  const response = await fetch(url)
-  if (!response.ok) throw new Error('Could not load the 3D shape.')
-  const raw = new Int16Array(await response.arrayBuffer())
-  const count = Math.floor(raw.length / 3)
-  const positions = new Float32Array(count * 3)
-  const colors = new Float32Array(count * 3)
-  const palette = paletteHex.map(hexRgb)
-  const yaw = (70 * Math.PI) / 180
-  const cos = Math.cos(yaw), sin = Math.sin(yaw)
-  for (let i = 0; i < count; i++) {
-    const x = raw[i * 3] / 32767, y = raw[i * 3 + 1] / 32767, z = raw[i * 3 + 2] / 32767
-    positions[i * 3] = (x * cos + z * sin) * 15
-    positions[i * 3 + 1] = y * 15
-    positions[i * 3 + 2] = (-x * sin + z * cos) * 15
-    const n = Math.min(1, Math.max(0, noise(x * 2.4 + 7.1, y * 2.4 + 3.3, z * 2.4) * 1.6 - 0.3))
-    const from = n < 0.5 ? palette[0] : palette[1]
-    const to = n < 0.5 ? palette[1] : palette[2]
-    const t = n < 0.5 ? n * 2 : n * 2 - 1
-    const shade = 0.7 + hash(i, 1.7, 9.2) * 0.3
-    for (let c = 0; c < 3; c++) colors[i * 3 + c] = (from[c] + (to[c] - from[c]) * t) * shade
-  }
   return { positions, colors, count }
 }
 
@@ -595,8 +552,6 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
       const sample =
         options.assetType === 'cloud'
           ? cloudSample(await loadBakedCloud(options.assetUrl), total, random(seedBase))
-          : options.assetType === 'bin'
-          ? cloudSample(await loadCloud(options.assetUrl, options.palette), total, random(seedBase))
           : imageSample(await loadImage(options.assetUrl), total, random(seedBase))
       if (disposed) return
       if (options.seed != null) applySeedColour(sample, options.seed)

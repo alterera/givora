@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { createAdminClient, assetUrl } from '@/lib/supabase-admin'
 import { getUser } from '@/lib/auth'
-import { viewerProps, serialNumber, type Product } from '@/lib/products'
+import { viewerProps, type Product } from '@/lib/products'
 import { getOpenListing, getPieceState, getProvenance } from '@/lib/pieces'
 import { fmtDate, inr } from '@/lib/format'
 import ProductViewer from '@/components/particle/ProductViewer'
@@ -43,7 +43,7 @@ async function Certificate({ params }: { params: Promise<{ serial: string }> }) 
         <header className="reveal d1">
           <p className="eyebrow">Certificate of authenticity</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <h1 className="mono text-4xl font-semibold tracking-tight md:text-5xl">{p.serial}</h1>
+            <h1 className="mono break-all text-2xl font-semibold tracking-tight sm:text-4xl md:text-5xl">{p.serial}</h1>
             <span className="badge badge-live">1 OF 1</span>
           </div>
           <p className="mt-3 text-xl tracking-tight">{p.title}</p>
@@ -93,7 +93,7 @@ async function Certificate({ params }: { params: Promise<{ serial: string }> }) 
             <VerifyFile fingerprint={p.fingerprint} fileUrl={assetUrl(p.asset_path)} />
           </div>
         )}
-        <p className="mono text-[11px] text-[#5f5f5f]">Plaque on the artwork reads {serialNumber(p.serial)}. Provenance is append-only and hash-chained.</p>
+        <p className="mono text-[11px] text-[#5f5f5f]">Provenance is append-only and hash-chained.</p>
       </div>
     </main>
   )

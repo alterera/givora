@@ -45,12 +45,12 @@ async function Detail({ params }: { params: Promise<{ slug: string }> }) {
 
   return (
     <main>
-    <div className="container-x grid gap-8 py-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] lg:gap-14 lg:py-10">
-      <div className="reveal mx-auto flex w-full max-w-sm flex-col gap-3 lg:sticky lg:top-24 lg:mx-0 lg:self-start">
+    <div className="container-x grid gap-8 py-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12 lg:py-10">
+      <div className="reveal mx-auto flex w-full max-w-xl flex-col gap-3 lg:sticky lg:top-20 lg:mx-0 lg:max-w-none lg:self-start">
         <LiveViewers seed={p.slug} />
-        <div className="relative aspect-square w-full border border-[var(--line)]">
+        <div className="relative aspect-square w-full border border-[var(--line)] lg:aspect-[6/7]">
           <ProductViewer {...viewerProps(p, undefined, { interactive: true, owner: isOwner })} className="absolute inset-0" />
-          <span className="eyebrow pointer-events-none absolute bottom-3 left-3">Drag to rotate · Pinch or Ctrl+scroll to zoom · Double-tap to reset</span>
+          <span className="eyebrow pointer-events-none absolute bottom-3 left-3">Drag to rotate · Pinch to zoom</span>
         </div>
       </div>
 
@@ -124,10 +124,10 @@ async function Detail({ params }: { params: Promise<{ slug: string }> }) {
 function ProductSkeleton() {
   return (
     <main aria-busy="true" aria-label="Loading piece">
-      <div className="container-x grid gap-8 py-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] lg:gap-14 lg:py-10">
-        <div className="mx-auto flex w-full max-w-sm flex-col gap-3 lg:mx-0">
+      <div className="container-x grid gap-8 py-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12 lg:py-10">
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-3 lg:mx-0 lg:max-w-none">
           <div className="skel h-12" />
-          <div className="relative aspect-square w-full overflow-hidden border border-[#0f2a1e]">
+          <div className="relative aspect-square w-full overflow-hidden border border-[#0f2a1e] lg:aspect-[6/7]">
             <div className="particle-skeleton" />
             <span className="mono absolute bottom-3 left-3 text-[10px] uppercase tracking-[.2em] text-[#4f8f72]">Decrypting piece…</span>
           </div>

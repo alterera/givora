@@ -8,8 +8,6 @@ import { createAdminClient, ASSET_BUCKET } from '@/lib/supabase-admin'
 
 export type AdminState = { error?: string } | undefined
 
-const HEX = /^#[0-9a-fA-F]{6}$/
-
 export async function saveProductAction(_: AdminState, form: FormData): Promise<AdminState> {
   await requireAdmin() // never rely on the proxy alone
   const db = createAdminClient()
@@ -22,9 +20,6 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
   if (!title || !slug) return { error: 'Title and slug are required.' }
   if (!(price > 0)) return { error: 'Price must be greater than 0.' }
   if (!(royaltyPct >= 0 && royaltyPct <= 20)) return { error: 'Artist royalty must be between 0 and 20%.' }
-
-  const palette = ['palette1', 'palette2', 'palette3'].map((k) => String(form.get(k) ?? ''))
-  if (!palette.every((c) => HEX.test(c))) return { error: 'Palette colours must be #rrggbb.' }
 
   let viewerConfig: Record<string, unknown> = {}
   const rawConfig = String(form.get('viewer_config') ?? '').trim()
@@ -49,20 +44,19 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
 
   const file = form.get('asset')
   let assetPath = String(form.get('asset_path') ?? '')
-  let assetType = String(form.get('asset_type') ?? 'bin')
+  let assetType = String(form.get('asset_type') ?? 'cloud')
   let fingerprint: string | undefined
   if (file instanceof File && file.size > 0) {
     if (minted) return { error: 'This piece is minted. Its artwork file can no longer be replaced.' }
     const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-    if (ext === 'bin') assetType = 'bin'
-    else if (ext === 'cloud') assetType = 'cloud'
+    if (ext === 'cloud') assetType = 'cloud'
     else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) assetType = 'image'
-    else return { error: 'Upload a .glb model, a .bin point cloud, or a png/jpg/webp image.' }
+    else return { error: 'Upload a .glb model or a png/jpg/webp image.' }
     const bytes = Buffer.from(await file.arrayBuffer())
     fingerprint = crypto.createHash('sha256').update(bytes).digest('hex') // SHA-256 of the stored file
     assetPath = `${crypto.randomUUID()}.${ext}`
     const { error } = await db.storage.from(ASSET_BUCKET).upload(assetPath, bytes, {
-      contentType: ext === 'bin' || ext === 'cloud' ? 'application/octet-stream' : file.type,
+      contentType: ext === 'cloud' ? 'application/octet-stream' : file.type,
     })
     if (error) return { error: `Upload failed: ${error.message}` }
   }
@@ -73,7 +67,7 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
     artist_name: artistName, price_inr: price,
     royalty_bps: Math.round(royaltyPct * 100),
     asset_path: assetPath, asset_type: assetType,
-    viewer_config: viewerConfig, palette,
+    viewer_config: viewerConfig,
     status: form.get('status') === 'published' ? 'published' : 'draft',
   }
   if (fingerprint) row.fingerprint = fingerprint

@@ -5,7 +5,7 @@ import type { ViewerConfig } from '@/lib/particle/runtime'
 export type Product = {
   id: string; slug: string; title: string; description: string; artist_name: string
   price_inr: number; stock: number; sold: number; asset_path: string
-  asset_type: 'bin' | 'image' | 'cloud'; viewer_config: Partial<ViewerConfig>; palette: string[]
+  asset_type: 'image' | 'cloud'; viewer_config: Partial<ViewerConfig>; palette: string[]
   status: 'draft' | 'published'
   serial: string | null; seed: number | null; minted_at: string | null
   fingerprint: string | null; royalty_bps: number
@@ -33,9 +33,4 @@ export function viewerProps(
     seed: p.seed ?? undefined,
     ...extras,
   }
-}
-
-/** "GIV-0042" -> "0042" for the particle plaque. */
-export function serialNumber(serial: string | null | undefined) {
-  return serial ? serial.replace(/^GIV-/, '') : ''
 }

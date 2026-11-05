@@ -5,7 +5,7 @@ import { createParticleViewer, type ViewerApi, type ViewerConfig } from '@/lib/p
 
 export type ParticleViewerProps = {
   assetUrl: string
-  assetType: 'bin' | 'image' | 'cloud'
+  assetType: 'image' | 'cloud'
   palette: string[]
   config?: Partial<ViewerConfig>
   maxParticles?: number
