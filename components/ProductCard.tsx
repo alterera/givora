@@ -21,6 +21,7 @@ export default function ProductCard({ product: p, index = 0, lastSale }: { produ
         <span className="corner tl" /><span className="corner tr" /><span className="corner bl" /><span className="corner br" />
         <div className="absolute left-2.5 top-2.5 flex gap-1.5">
           <span className={`badge ${owned ? '' : 'badge-live'}`}>{owned ? 'OWNED' : 'AVAILABLE'}</span>
+          {p.asset_path === 'pending' && <span className="badge">ARTWORK PENDING</span>}
         </div>
         <span className="hash absolute bottom-2.5 left-3"><ScrambleText text={shortHash(p)} hover /></span>
       </div>

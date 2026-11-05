@@ -5,6 +5,7 @@ import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { sendOtpEmail } from '@/lib/email'
+import { checkPassword, PASSWORD_ERROR } from '@/lib/password-rules'
 
 export type ResetState = { error?: string; values?: { email?: string } } | undefined
 
@@ -22,30 +23,43 @@ const same = (a: string, b: string) => {
   return x.length === y.length && crypto.timingSafeEqual(x, y)
 }
 
+const RESEND_SECONDS = 60
+
+/** Creates and e-mails a code if the account exists. Silent in every other case (no account, rate limit, cooldown). */
+async function issueCode(email: string) {
+  const db = createAdminClient()
+  const { data: profile } = await db.from('profiles').select('id').eq('email', email).maybeSingle() // exact match: no wildcard lookups
+  if (!profile) return
+  const since = new Date(Date.now() - 3600_000).toISOString()
+  const { data: recent } = await db.from('password_resets').select('created_at').eq('email', email).gte('created_at', since).order('created_at', { ascending: false })
+  const latest = recent?.[0]?.created_at ? new Date(recent[0].created_at).getTime() : 0
+  if (Date.now() - latest < RESEND_SECONDS * 1000 - 2000) return // cooldown, enforced here as well as in the UI
+  if ((recent?.length ?? 0) >= MAX_REQUESTS_PER_HOUR) return
+  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
+  const { error } = await db.from('password_resets').insert({
+    email, code_hash: hashCode(email, code), expires_at: new Date(Date.now() + OTP_MINUTES * 60_000).toISOString(),
+  })
+  if (error) { console.error('[reset] could not store code:', error.message); return }
+  after(() => sendOtpEmail(email, code, OTP_MINUTES))
+  after(async () => { // housekeeping: forget codes older than a day
+    await db.from('password_resets').delete().lt('created_at', new Date(Date.now() - 86_400_000).toISOString())
+  })
+}
+
 /** Step 1: e-mail a 6-digit code. Always behaves the same, so it cannot be used to discover which e-mails have accounts. */
 export async function requestResetAction(_: ResetState, form: FormData): Promise<ResetState> {
   const email = String(form.get('email') ?? '').trim().toLowerCase()
   if (!EMAIL.test(email) || email.length > 120) return { error: 'Enter a valid email address.', values: { email } }
-
-  const db = createAdminClient()
-  const { data: profile } = await db.from('profiles').select('id').eq('email', email).maybeSingle() // exact match: no wildcard lookups
-
-  if (profile) {
-    const since = new Date(Date.now() - 3600_000).toISOString()
-    const { count } = await db.from('password_resets').select('id', { count: 'exact', head: true }).eq('email', email).gte('created_at', since)
-    if ((count ?? 0) < MAX_REQUESTS_PER_HOUR) {
-      const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0')
-      const { error } = await db.from('password_resets').insert({
-        email, code_hash: hashCode(email, code), expires_at: new Date(Date.now() + OTP_MINUTES * 60_000).toISOString(),
-      })
-      if (error) console.error('[reset] could not store code:', error.message)
-      else after(() => sendOtpEmail(email, code, OTP_MINUTES))
-    }
-    after(async () => { // housekeeping: forget codes older than a day
-      await db.from('password_resets').delete().lt('created_at', new Date(Date.now() - 86_400_000).toISOString())
-    })
-  }
+  await issueCode(email)
   redirect(`/reset-password?email=${encodeURIComponent(email)}`)
+}
+
+/** "Send a new code" on the reset page: same behaviour, but stays on the page. */
+export async function resendCodeAction(email: string): Promise<{ ok: boolean }> {
+  const clean = String(email ?? '').trim().toLowerCase()
+  if (!EMAIL.test(clean) || clean.length > 120) return { ok: false }
+  await issueCode(clean)
+  return { ok: true }
 }
 
 /** Step 2: check the code and set the new password. */
@@ -58,7 +72,7 @@ export async function resetPasswordAction(_: ResetState, form: FormData): Promis
 
   if (!EMAIL.test(email)) return fail('Enter a valid email address.')
   if (code.length !== 6) return fail('Enter the 6-digit code from the email.')
-  if (password.length < 8) return fail('Your password must be at least 8 characters.')
+  if (!checkPassword(password).ok) return fail(PASSWORD_ERROR)
   if (password !== confirm) return fail('The two passwords do not match.')
 
   const db = createAdminClient()

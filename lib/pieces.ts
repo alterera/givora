@@ -87,6 +87,12 @@ export async function getPieceState(productId: string): Promise<PieceState> {
   const db = createAdminClient()
   const { data: e } = await db.from('editions').select('id, owner_id, frozen').eq('product_id', productId).maybeSingle()
   if (!e) return { ownerName: null, ownerId: null, awaitingClaim: false, editionId: null, frozen: false }
+  if (!e.owner_id && e.frozen) {
+    // Archive pieces (imported history) have no account owner: show the last holder from the provenance chain.
+    const { data: last } = await db.from('piece_events').select('to_ref').eq('product_id', productId).order('id', { ascending: false }).limit(1).maybeSingle()
+    const ref = last?.to_ref ?? ''
+    if (ref.startsWith('guest:')) return { ownerName: `@${ref.slice(6)}`, ownerId: null, awaitingClaim: false, editionId: e.id, frozen: true }
+  }
   if (!e.owner_id) return { ownerName: null, ownerId: null, awaitingClaim: true, editionId: e.id, frozen: e.frozen }
   const { data: p } = await db.from('profiles').select('handle, hide_handle').eq('id', e.owner_id).maybeSingle()
   return { ownerName: publicName(p), ownerId: e.owner_id, awaitingClaim: false, editionId: e.id, frozen: e.frozen }

@@ -11,6 +11,8 @@ export type Product = {
   fingerprint: string | null; royalty_bps: number
 }
 
+export const PENDING_ASSET = 'pending'
+
 export type ViewerExtras = {
   /** Show the collector-only effect (owner viewing their own piece). */
   owner?: boolean
@@ -25,8 +27,9 @@ export function viewerProps(
   extras: ViewerExtras = {},
 ) {
   return {
-    assetUrl: assetUrl(p.asset_path),
-    assetType: p.asset_type,
+    // 'pending' = artwork not uploaded yet: an empty URL makes the viewer draw a placeholder instead of fetching.
+    assetUrl: p.asset_path === PENDING_ASSET ? '' : assetUrl(p.asset_path),
+    assetType: p.asset_path === PENDING_ASSET ? ('cloud' as const) : p.asset_type,
     palette: p.palette,
     config: p.viewer_config,
     maxParticles,

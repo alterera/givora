@@ -59,7 +59,8 @@ export default function ProductForm({ initial = {} }: { initial?: Initial }) {
           <label className="label">
             Upload a .glb (colours kept) or a png/jpg/webp image{initial.asset_path && <> · current: <span className="mono">{initial.asset_path}</span></>}
           </label>
-          <input name="asset" type="file" disabled={!!initial.minted_at} accept=".glb,.png,.jpg,.jpeg,.webp" className="input h-auto py-2 file:mr-3 file:border-0 file:bg-[var(--g)] file:px-3 file:py-1 file:text-black" />
+          {initial.asset_path === 'pending' && <p className="mb-2 border border-[var(--g)]/30 bg-[var(--g)]/5 p-3 text-xs text-[#b9d9cb]">Media missing. Upload the artwork now: it attaches once, gets its SHA-256 fingerprint, and is then locked. Until then visitors see a placeholder.</p>}
+          <input name="asset" type="file" disabled={!!initial.minted_at && !!initial.fingerprint}accept=".glb,.png,.jpg,.jpeg,.webp" className="input h-auto py-2 file:mr-3 file:border-0 file:bg-[var(--g)] file:px-3 file:py-1 file:text-black" />
         </div>
         <div>
           <label className="label">Viewer config JSON (paste a Particleify CONFIG; non-visual keys are dropped)</label>

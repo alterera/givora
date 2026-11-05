@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import type { AuthState } from './auth'
+import { checkPassword, PASSWORD_ERROR } from '@/lib/password-rules'
 
 export async function redeemAction(_: AuthState, form: FormData): Promise<AuthState> {
   const token = String(form.get('token') ?? '')
@@ -20,6 +21,8 @@ export async function redeemAction(_: AuthState, form: FormData): Promise<AuthSt
       if (error) return { error: error.message }
       user = data.user
     } else {
+      if (!checkPassword(password).ok) return { error: PASSWORD_ERROR }
+      if (password !== String(form.get('confirm_password') ?? password)) return { error: 'The two passwords do not match.' }
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) return { error: error.message }
       if (!data.session) return { error: 'Email confirmation is on in Supabase; disable "Confirm email" for now.' }

@@ -41,7 +41,7 @@ async function Redeem({ params }: { params: Promise<{ token: string }> }) {
   return (
     <GiftReveal
       viewer={viewerProps(p)}
-      title={p.title} artist={p.artist_name} serial={p.serial}
+      mode="gift" title={p.title} artist={p.artist_name} serial={p.serial}
       sender={gift?.gift_sender_name ?? null} message={gift?.gift_message ?? null} occasion={gift?.gift_occasion ?? null}
     >
       {form}

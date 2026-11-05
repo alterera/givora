@@ -7,6 +7,7 @@ import ProductCard from '@/components/ProductCard'
 import HashBand from '@/components/HashBand'
 import Reveal from '@/components/Reveal'
 import ScrambleText from '@/components/ScrambleText'
+import Topbar from '@/components/Topbar'
 import NewsletterCta from '@/components/NewsletterCta'
 
 export const metadata = { alternates: { canonical: '/' } }
@@ -78,6 +79,7 @@ const UNIQUE = [
 export default function Home() {
   return (
     <main>
+      <Topbar />
       <Suspense fallback={<div className="min-h-[78vh] border-b border-[var(--line)]" />}><Hero /></Suspense>
 
       <section id="collection" className="container-x scroll-mt-20 py-20">

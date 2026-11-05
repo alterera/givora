@@ -1,31 +1,29 @@
 'use client'
 
-import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
+import { EnvelopeSimpleIcon, HashIcon } from '@phosphor-icons/react'
 import { resetPasswordAction, type ResetState } from '@/lib/actions/password'
+import Field from '@/components/auth/Field'
+import PasswordFields from '@/components/auth/PasswordFields'
+import ResendCode from '@/components/auth/ResendCode'
 
 export default function ResetPasswordForm({ email }: { email: string }) {
   const [state, action, pending] = useActionState<ResetState, FormData>(resetPasswordAction, undefined)
+  const [mail, setMail] = useState(email)
+  const [valid, setValid] = useState(false)
   return (
-    <form action={action} className="flex flex-col gap-4">
-      <div>
-        <label className="label" htmlFor="r-email">Email</label>
-        <input id="r-email" name="email" type="email" autoComplete="email" required defaultValue={state?.values?.email ?? email} className="input" />
-      </div>
-      <div>
-        <label className="label" htmlFor="r-code">6-digit code</label>
-        <input
-          id="r-code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} required placeholder="······"
-          className="input mono h-12 text-center text-xl tracking-[.5em]"
+    <div className="flex flex-col gap-4">
+      <form action={action} className="flex flex-col gap-4">
+        <Field id="r-email" name="email" type="email" label="Email" autoComplete="email" required value={mail} onChange={(e) => setMail(e.target.value)} icon={<EnvelopeSimpleIcon />} />
+        <Field
+          id="r-code" name="code" label="6-digit code" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} required placeholder="······"
+          className="mono tracking-[.4em]" icon={<HashIcon />}
         />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div><label className="label" htmlFor="r-pass">New password</label><input id="r-pass" name="password" type="password" autoComplete="new-password" minLength={8} required className="input" /></div>
-        <div><label className="label" htmlFor="r-confirm">Confirm password</label><input id="r-confirm" name="confirm_password" type="password" autoComplete="new-password" minLength={8} required className="input" /></div>
-      </div>
-      <button disabled={pending} className="btn btn-primary btn-lg">{pending ? 'Updating…' : 'Set new password'}</button>
-      {state?.error && <p role="alert" className="border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{state.error}</p>}
-      <p className="text-center text-sm text-[#8f8f8f]">No code? <Link href="/forgot-password" className="text-[var(--g)] hover:underline">Send a new one</Link></p>
-    </form>
+        <PasswordFields idPrefix="r" passLabel="New password" onValidChange={setValid} />
+        <button disabled={pending || !valid} className="btn btn-primary btn-lg disabled:opacity-50">{pending ? 'Updating…' : 'Set new password'}</button>
+        {state?.error && <p role="alert" className="border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{state.error}</p>}
+      </form>
+      <ResendCode email={mail} />
+    </div>
   )
 }

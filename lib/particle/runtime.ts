@@ -125,6 +125,25 @@ function hexRgb(hex: string): [number, number, number] {
 }
 
 /** Our baked cloud: Float32 xyz * N then Uint8 rgb * N (see bake.ts). Colours are stored, not palette-derived. */
+/** Stand-in shape for pieces whose artwork has not been uploaded yet: a seeded, softly glowing knot. */
+function placeholderCloud(rand: () => number) {
+  const count = 24000
+  const positions = new Float32Array(count * 3)
+  const colors = new Float32Array(count * 3)
+  const p = 2 + Math.floor(rand() * 3), q = 3 + Math.floor(rand() * 4)
+  for (let i = 0; i < count; i++) {
+    const t = rand() * Math.PI * 2
+    const r = 7 + 3.2 * Math.cos(q * t)
+    const jitter = 0.9 + rand() * 1.4, a = rand() * Math.PI * 2
+    positions[i * 3] = r * Math.cos(p * t) + Math.cos(a) * jitter
+    positions[i * 3 + 1] = r * Math.sin(p * t) + Math.sin(a) * jitter
+    positions[i * 3 + 2] = 3.2 * Math.sin(q * t) + (rand() - 0.5) * jitter
+    const k = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 3))
+    colors[i * 3] = 0.1 * k; colors[i * 3 + 1] = k; colors[i * 3 + 2] = 0.62 * k
+  }
+  return { positions, colors, count }
+}
+
 async function loadBakedCloud(url: string) {
   const response = await fetch(url)
   if (!response.ok) throw new Error('Could not load the 3D shape.')
@@ -551,7 +570,7 @@ export function createParticleViewer(canvas: HTMLCanvasElement, options: ViewerO
       const total = Math.max(5000, Math.min(150000, Math.round(options.maxParticles ?? cfg.particleCount)))
       const sample =
         options.assetType === 'cloud'
-          ? cloudSample(await loadBakedCloud(options.assetUrl), total, random(seedBase))
+          ? cloudSample(options.assetUrl ? await loadBakedCloud(options.assetUrl) : placeholderCloud(random(seedBase + 11)), total, random(seedBase))
           : imageSample(await loadImage(options.assetUrl), total, random(seedBase))
       if (disposed) return
       if (options.seed != null) applySeedColour(sample, options.seed)

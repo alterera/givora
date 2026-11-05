@@ -12,7 +12,7 @@ export default function Footer() {
       <HalftoneWordmarkFooter
         wordmark="givora"
         label="Givora World"
-        meta="©2026 · One-of-one digital art"
+        meta="© 2018 - 2026 · One-of-one digital art"
         columns={COLUMNS}
         preset="night"
         palette={{ background: '#000', ink: '#c9ffe8', warm: '#19ffa0' }}

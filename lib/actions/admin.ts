@@ -34,7 +34,7 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
   }
 
   // A minted piece is a public promise: its artwork and artist can never change.
-  const existing = id ? (await db.from('products').select('minted_at, artist_name').eq('id', id).single()).data : null
+  const existing = id ? (await db.from('products').select('minted_at, artist_name, fingerprint, asset_path').eq('id', id).single()).data : null
   const minted = !!existing?.minted_at
 
   const artistName = String(form.get('artist_name') ?? '')
@@ -47,7 +47,8 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
   let assetType = String(form.get('asset_type') ?? 'cloud')
   let fingerprint: string | undefined
   if (file instanceof File && file.size > 0) {
-    if (minted) return { error: 'This piece is minted. Its artwork file can no longer be replaced.' }
+    // Locked once artwork is attached; a minted piece that still has no artwork can take it once.
+    if (minted && existing?.fingerprint) return { error: 'This piece is minted. Its artwork file can no longer be replaced.' }
     const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
     if (ext === 'cloud') assetType = 'cloud'
     else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) assetType = 'image'
@@ -61,7 +62,10 @@ export async function saveProductAction(_: AdminState, form: FormData): Promise<
     })
     if (error) return { error: `Upload failed: ${error.message}` }
   }
+  // On a minted piece the stored artwork is authoritative, never the hidden form field.
+  if (!fingerprint && existing?.asset_path) assetPath = existing.asset_path
   if (!assetPath) return { error: 'An asset file is required.' }
+  if (assetPath === 'pending' && form.get('status') === 'published' && !minted) return { error: 'Upload the artwork before publishing.' }
 
   const row: Record<string, unknown> = {
     slug, title, description: String(form.get('description') ?? ''),

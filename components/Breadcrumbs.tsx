@@ -29,6 +29,8 @@ const SEGMENTS: Record<string, { label: string; href: string | null }> = {
   signup: { label: 'Sign up', href: '/signup' },
 }
 
+const AUTH_PAGES = new Set(['login', 'signup', 'forgot-password', 'reset-password'])
+
 function humanize(s: string) {
   const d = decodeURIComponent(s)
   if (/^GIV(-[0-9A-Fa-f]{4}){3}$/i.test(d)) return d.toUpperCase() // serials such as GIV-7F3A-91C2-D4E8
@@ -39,7 +41,7 @@ function humanize(s: string) {
 export default function Breadcrumbs() {
   const pathname = usePathname()
   const parts = pathname.split('/').filter(Boolean)
-  if (!parts.length) return null
+  if (!parts.length || AUTH_PAGES.has(parts[0])) return null // auth screens are full-bleed and stand alone
 
   const crumbs: { label: string; href: string | null }[] = [{ label: 'Home', href: '/' }]
   let acc = ''

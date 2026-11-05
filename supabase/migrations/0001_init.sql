@@ -55,7 +55,7 @@ create table public.editions (
   product_id uuid not null references public.products(id),
   order_id uuid not null unique references public.orders(id),
   edition_no integer not null,
-  claim_token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  claim_token text not null unique default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
   owner_id uuid references auth.users(id),
   claimed_at timestamptz,
   recipient_email text,

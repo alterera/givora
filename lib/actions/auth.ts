@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/server'
+import { checkPassword, PASSWORD_ERROR } from '@/lib/password-rules'
 
 export type AuthState = { error?: string } | undefined
 
@@ -32,7 +33,7 @@ export async function signupAction(_: SignupState, form: FormData): Promise<Sign
   if (!values.first_name || !values.last_name) return fail('Enter your first and last name.')
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) return fail('Enter a valid email address.')
   if (values.phone && !/^[+()\-\s\d]{7,18}$/.test(values.phone)) return fail('Enter a valid phone number, or leave it blank.')
-  if (password.length < 8) return fail('Your password must be at least 8 characters.')
+  if (!checkPassword(password).ok) return fail(PASSWORD_ERROR)
   if (password !== confirm) return fail('The two passwords do not match.')
 
   const supabase = await createClient()

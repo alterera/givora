@@ -7,7 +7,7 @@ async function Dashboard() {
   await requireAdmin()
   const db = createAdminClient()
   const [{ data: products }, { data: orders }] = await Promise.all([
-    db.from('products').select("id, title, slug, serial, price_inr, stock, sold, status").order('created_at', { ascending: false }),
+    db.from('products').select("id, title, slug, serial, price_inr, stock, sold, status, asset_path").order('created_at', { ascending: false }),
     db.from('orders').select('id, buyer_email, amount, status, is_gift, created_at, products(title)').order('created_at', { ascending: false }).limit(50),
   ])
   const paid = (orders ?? []).filter((o) => o.status === 'paid')
@@ -30,7 +30,7 @@ async function Dashboard() {
             <tbody>
               {products?.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.title}</td><td className="mono text-xs">{p.serial}</td><td className="mono">₹{p.price_inr}</td><td className="mono">{p.sold ? "yes" : "no"}</td>
+                  <td>{p.title}{p.asset_path === 'pending' && <span className="badge ml-2 text-amber-300">Media missing</span>}</td><td className="mono text-xs">{p.serial}</td><td className="mono">₹{p.price_inr}</td><td className="mono">{p.sold ? "yes" : "no"}</td>
                   <td><span className={`badge ${p.status === 'published' ? 'badge-live' : ''}`}>{p.status}</span></td>
                   <td className="text-right"><Link href={`/admin/products/${p.id}`} className="link-underline">Edit</Link></td>
                 </tr>
